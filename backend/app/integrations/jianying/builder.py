@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pyJianYingDraft as draft
 from pyJianYingDraft import (
     AudioMaterial,
     AudioSegment,
