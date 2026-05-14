@@ -91,3 +91,24 @@ def test_get_drafts_lists_draft_folders(client, tmp_path):
     assert resp.status_code == 200
     names = resp.json()["data"]
     assert "草稿A" in names and "草稿B" in names
+
+
+def test_get_tasks_lists_all_descending(client, monkeypatch):
+    # 直接往 registry 塞两个任务，验证列表接口按 created_at 倒序返回
+    from app.core.tasks import registry
+    older = registry.create("旧草稿")
+    newer = registry.create("新草稿")
+    # 确保 newer 的 created_at 更大
+    registry.update(newer.id, status="done", progress=100)
+
+    resp = client.get("/api/v1/tasks")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    ids = [t["id"] for t in data]
+    # 倒序：newer 在 older 前面
+    assert ids.index(newer.id) < ids.index(older.id)
+    # 每个任务对象字段齐全
+    sample = next(t for t in data if t["id"] == newer.id)
+    assert sample["draft_name"] == "新草稿"
+    assert sample["status"] == "done"
+    assert "created_at" in sample
