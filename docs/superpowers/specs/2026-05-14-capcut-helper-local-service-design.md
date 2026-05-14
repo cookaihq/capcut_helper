@@ -64,7 +64,7 @@ pywebview 开一个原生窗口，指向 `http://localhost:<端口>/`。
 
 | 组件 | 职责 |
 |------|------|
-| 本地服务（FastAPI） | HTTP 入口、CORS、token 校验、托管 GUI、路由转发到 service |
+| 本地服务（FastAPI） | HTTP 入口、CORS、托管 GUI、路由转发到 service |
 | 时间线规格 schema | API 契约，ai-canvas 传入的 JSON 结构（Pydantic 定义） |
 | 草稿构建 service | 把时间线规格翻译成 pyJianYingDraft 调用 |
 | 素材下载器 | 把素材 URL 并发下载进草稿文件夹，按内容哈希去重 |
@@ -72,7 +72,7 @@ pywebview 开一个原生窗口，指向 `http://localhost:<端口>/`。
 | jianying 集成层 | 包装 pyJianYingDraft（`create_draft`、`add_track`、`add_segment`、`save`） |
 | 原生桥（pywebview js_api） | 系统外壳操作：文件夹选择框、在访达/资源管理器打开、探测剪映草稿根目录 |
 | React GUI | 草稿列表、任务进度、日志、设置 |
-| 配置 | 端口段、剪映草稿根目录、CORS 白名单、访问 token |
+| 配置 | 端口段、剪映草稿根目录、CORS 白名单 |
 
 ## 6. 项目结构
 
@@ -180,7 +180,7 @@ ai-canvas 发现端口的流程：
 | 素材下载失败 | 单个素材重试 N 次，仍失败则整个任务失败，错误信息明确指出是哪个素材 |
 | 草稿根目录未配置/不存在 | GUI 引导用户去设置里选目录（走原生文件夹对话框） |
 | 时间线规格非法 | Pydantic 校验，返回 422 + 字段级错误 |
-| 跨域 + 防滥用 | CORS 白名单（ai-canvas 的开发端口 + 部署域名）；首次启动生成一个 token，GUI 设置里展示，用户填进 ai-canvas 配置 |
+| 跨域 + 防滥用 | CORS origin 白名单（ai-canvas 的开发端口 + 部署域名，作为桌面端默认常量内置、GUI 可改）+ 服务只绑定 localhost。API 为 JSON 接口，浏览器对未知 origin 的跨域请求会被 preflight 预检拦下，故不再需要 token。残留风险：本机任意进程可调用 API，对个人/小团队工具可接受 |
 | 草稿名重名 | 默认不覆盖，返回冲突错误；覆盖与否由调用方通过 `allow_replace` 显式指定 |
 | 剪映已锁定/打开该草稿 | 检测草稿文件夹内的锁文件，提示用户先关闭剪映再重试 |
 
