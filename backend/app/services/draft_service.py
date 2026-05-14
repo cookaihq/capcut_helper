@@ -33,11 +33,3 @@ async def run_draft_task(task_id: str, spec: TimelineSpec) -> None:
         registry.update(task_id, status="done", progress=100, result=str(draft_dir))
     except Exception as exc:  # noqa: BLE001 — 任何失败都落到 task 状态上报
         registry.update(task_id, status="failed", error=str(exc))
-
-
-def dispatch_draft_task(spec: TimelineSpec) -> str:
-    """创建 task 并在后台启动 run_draft_task，立即返回 task_id。
-    必须在有运行中事件循环的上下文调用（FastAPI async 路由内）。"""
-    state = registry.create()
-    asyncio.create_task(run_draft_task(state.id, spec))
-    return state.id
