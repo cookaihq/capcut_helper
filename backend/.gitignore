@@ -1,0 +1,9 @@
+# 根 .gitignore 的 worktree-copy 块 blanket-ignore 了所有名为 tests 的目录，
+# 这里重新包含本项目的 tests 目录，使测试文件能正常 git add
+!tests/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
