@@ -35,7 +35,8 @@ async def _download_one(
             return material.url, dest
         except Exception as exc:  # noqa: BLE001 — 下载失败统一兜底重试
             last_error = exc
-            await asyncio.sleep(_BACKOFF_BASE * (2 ** attempt))
+            if attempt < retries - 1:
+                await asyncio.sleep(_BACKOFF_BASE * (2 ** attempt))
 
     raise MaterialDownloadError(
         f"素材下载失败: {material.filename} ({material.url}) — {last_error}"
