@@ -17,7 +17,7 @@ _background_tasks: set[asyncio.Task] = set()
 
 @router.post("/drafts")
 async def create_draft(spec: TimelineSpec):
-    state = registry.create()
+    state = registry.create(spec.draft_name)
     task = asyncio.create_task(run_draft_task(state.id, spec))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)

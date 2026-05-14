@@ -1,3 +1,4 @@
+import time
 import uuid
 from dataclasses import asdict, dataclass
 from typing import Literal, Optional
@@ -8,6 +9,8 @@ TaskStatus = Literal["pending", "downloading", "building", "done", "failed"]
 @dataclass
 class TaskState:
     id: str
+    draft_name: str
+    created_at: float
     status: TaskStatus = "pending"
     progress: int = 0
     result: Optional[str] = None
@@ -21,14 +24,17 @@ class TaskRegistry:
     def __init__(self) -> None:
         self._tasks: dict[str, TaskState] = {}
 
-    def create(self) -> TaskState:
+    def create(self, draft_name: str) -> TaskState:
         task_id = uuid.uuid4().hex
-        state = TaskState(id=task_id)
+        state = TaskState(id=task_id, draft_name=draft_name, created_at=time.time())
         self._tasks[task_id] = state
         return state
 
     def get(self, task_id: str) -> Optional[TaskState]:
         return self._tasks.get(task_id)
+
+    def list(self) -> list[TaskState]:
+        return list(self._tasks.values())
 
     def update(self, task_id: str, **fields) -> TaskState:
         state = self._tasks[task_id]

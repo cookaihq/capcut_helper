@@ -48,7 +48,7 @@ async def test_full_draft_creation_flow(tmp_path, monkeypatch, fixture_video_1, 
         }
     )
 
-    task = registry.create()
+    task = registry.create("e2e_draft")
     await run_draft_task(task.id, spec)
 
     state = registry.get(task.id)

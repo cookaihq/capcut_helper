@@ -46,7 +46,7 @@ async def test_run_draft_task_success_path(tmp_path, monkeypatch):
     monkeypatch.setattr(draft_service.builder, "populate_draft", lambda *a, **k: None)
     monkeypatch.setattr(draft_service.builder, "save_draft", lambda *a, **k: None)
 
-    task = registry.create()
+    task = registry.create("svc_test")
     await draft_service.run_draft_task(task.id, _spec())
 
     state = registry.get(task.id)
@@ -59,7 +59,7 @@ async def test_run_draft_task_fails_when_draft_root_not_configured(tmp_path, mon
     cfg_path = tmp_path / "config.json"
     monkeypatch.setattr(config_mod, "CONFIG_PATH", cfg_path)  # 不写 config → draft_root 为 None
 
-    task = registry.create()
+    task = registry.create("svc_test")
     await draft_service.run_draft_task(task.id, _spec())
 
     state = registry.get(task.id)
