@@ -72,7 +72,7 @@ pywebview 开一个原生窗口，指向 `http://localhost:<端口>/`。
 | jianying 集成层 | 包装 pyJianYingDraft（`create_draft`、`add_track`、`add_segment`、`save`） |
 | 原生桥（pywebview js_api） | 系统外壳操作：文件夹选择框、在访达/资源管理器打开、探测剪映草稿根目录 |
 | React GUI | 草稿列表、任务进度、日志、设置 |
-| 配置 | 端口、剪映草稿根目录、CORS 白名单、访问 token |
+| 配置 | 端口段、剪映草稿根目录、CORS 白名单、访问 token |
 
 ## 6. 项目结构
 
@@ -99,7 +99,7 @@ capcut_helper/
 
 | 端点 | 作用 |
 |------|------|
-| `GET /api/v1/health` | 健康检查，ai-canvas 探测服务是否在 |
+| `GET /api/v1/health` | 健康检查 + 服务身份标识，ai-canvas 探测端口时用（见 7.3） |
 | `POST /api/v1/drafts` | 提交时间线规格，新建草稿 → 立即返回 `task_id` |
 | `GET /api/v1/tasks/{task_id}` | 查任务进度/状态/结果（草稿路径） |
 | `GET /api/v1/drafts` | 列出助手建过的草稿（GUI 展示用） |
@@ -140,6 +140,22 @@ capcut_helper/
 
 `data` 含：`status`（pending / downloading / building / done / failed）、`progress`（0–100）、`result`（成功时为草稿文件夹路径）、`error`（失败时为错误详情，含具体哪个素材失败）。
 
+### 7.3 health 响应与端口发现
+
+桌面端不绑死单一端口：从一个约定的小端口段（如 `9527–9536`）里挑，被占则顺延到下一个空闲端口。
+
+`GET /api/v1/health` 的 `data` 返回**服务身份标识**：`{ "service": "capcut_helper", "version": "...", "port": <实际端口> }`。
+
+ai-canvas 发现端口的流程：
+1. 优先读自己 localStorage 里上次成功的端口，先试它
+2. 没有或失败，则依次 `fetch` 端口段里每个端口的 `/api/v1/health`
+3. 收到响应且 `data.service === "capcut_helper"` 才认定连上（避免误连到其他本地服务）
+4. 连上后把端口写回 ai-canvas 自己的 localStorage，下次优先用
+
+桌面端无法写浏览器 localStorage（origin 隔离），所以端口发现由网页侧主动探测完成，全程无需用户手动配置。仅当整个端口段都被占用这种极端情况，才回退到「桌面端 GUI 显眼展示端口 + 系统通知 + 用户在 ai-canvas 手动填端口」。
+
+桌面端 GUI 额外记录「最近一次收到 ai-canvas 请求的时间」，据此显示「已连接 / 未连接」状态。
+
 ## 8. 数据流
 
 一次导入发生了什么：
@@ -160,7 +176,7 @@ capcut_helper/
 
 | 场景 | 处理 |
 |------|------|
-| 端口被占 | 固定默认端口启动失败 → GUI 明确报错让用户释放端口，不做动态端口发现（浏览器里的 ai-canvas 读不了本地文件） |
+| 端口被占 | 桌面端在约定端口段内自动顺延到下一个空闲端口（见 7.3）；ai-canvas 通过探测端口段的 `/health` 自动发现，无需手动配置。仅当整段都被占才回退到 GUI 显眼展示端口 + 系统通知 + 手动填端口 |
 | 素材下载失败 | 单个素材重试 N 次，仍失败则整个任务失败，错误信息明确指出是哪个素材 |
 | 草稿根目录未配置/不存在 | GUI 引导用户去设置里选目录（走原生文件夹对话框） |
 | 时间线规格非法 | Pydantic 校验，返回 422 + 字段级错误 |
