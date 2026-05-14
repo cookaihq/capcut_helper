@@ -11,6 +11,7 @@ def create_app(port: int) -> FastAPI:
     app = FastAPI(title="capcut_helper")
     app.state.port = port
     app.state.version = __version__
+    app.state.last_draft_request_at = None
 
     cfg = load_config()
     app.add_middleware(

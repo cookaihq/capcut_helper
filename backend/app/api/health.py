@@ -12,5 +12,6 @@ async def health(request: Request):
             "service": "capcut_helper",
             "version": request.app.state.version,
             "port": request.app.state.port,
+            "last_draft_request_at": request.app.state.last_draft_request_at,
         },
     }

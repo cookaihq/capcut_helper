@@ -112,3 +112,18 @@ def test_get_tasks_lists_all_descending(client, monkeypatch):
     assert sample["draft_name"] == "新草稿"
     assert sample["status"] == "done"
     assert "created_at" in sample
+
+
+def test_health_last_draft_request_at_updates_after_post(client, monkeypatch):
+    # 初始为 None
+    assert client.get("/api/v1/health").json()["data"]["last_draft_request_at"] is None
+
+    # POST 一次 drafts（monkeypatch 掉后台任务，只关心时间戳被记上）
+    async def _noop(task_id, spec):
+        return None
+    monkeypatch.setattr("app.api.drafts.run_draft_task", _noop)
+    client.post("/api/v1/drafts", json=_valid_spec_body())
+
+    ts = client.get("/api/v1/health").json()["data"]["last_draft_request_at"]
+    assert isinstance(ts, (int, float))
+    assert ts > 0

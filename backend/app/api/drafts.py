@@ -1,7 +1,8 @@
 import asyncio
+import time
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.core.config import load_config
 from app.core.tasks import registry
@@ -16,7 +17,8 @@ _background_tasks: set[asyncio.Task] = set()
 
 
 @router.post("/drafts")
-async def create_draft(spec: TimelineSpec):
+async def create_draft(spec: TimelineSpec, request: Request):
+    request.app.state.last_draft_request_at = time.time()
     state = registry.create(spec.draft_name)
     task = asyncio.create_task(run_draft_task(state.id, spec))
     _background_tasks.add(task)
