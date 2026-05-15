@@ -78,8 +78,24 @@ function range(a, b) { return Array.from({ length: b - a + 1 }, (_, i) => a + i)
 响应 `data`：
 
 ```json
-{ "service": "capcut_helper", "version": "0.1.0", "port": 9527 }
+{
+  "service": "capcut_helper",
+  "version": "0.1.0",
+  "port": 9527,
+  "last_draft_request_at": 1715760000.0
+}
 ```
+
+字段说明：
+
+| 字段 | 含义 |
+|------|------|
+| `service` | 固定为 `"capcut_helper"`，用于端口探测时确认对方是本服务 |
+| `version` | 当前 helper 的语义化版本号（来自 `app/__init__.py::__version__`，单一来源） |
+| `port` | 当前监听端口（与请求端口一致，便于调用方核对） |
+| `last_draft_request_at` | 最近一次成功收到 `POST /drafts` 的 Unix 时间戳（秒）；从未收到过返回 `null`。GUI 状态栏用，调用方一般可忽略 |
+
+**关于 `version` 的使用建议**：如果你的程序对 helper 有最低版本要求（例如依赖新增的字段、新增的轨道类型），请用 `data.version` 自己做版本比较（`packaging.version` / `semver` 等库），低于最低版本时提示用户去 GitHub Releases 升级 helper。capcut_helper 自身也会在启动时向 GitHub 检查更新并提示用户，但调用方**不应依赖这一点**——调用方要主动检查并做自己的兼容性判断。
 
 ### 5.2 `POST /drafts` — 提交时间线规格，新建草稿
 
