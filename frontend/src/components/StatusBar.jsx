@@ -29,7 +29,9 @@ export default function StatusBar() {
     >
       <span>
         <span style={{ color: online ? '#52c41a' : '#ff4d4f' }}>●</span>{' '}
-        {online ? `服务运行中 · 端口 ${health.port}` : '连接本地服务中…'}
+        {online
+          ? `服务运行中 · 端口 ${health.port}${health.version ? ` · v${health.version}` : ''}`
+          : '连接本地服务中…'}
       </span>
       <span>
         {lastReq
