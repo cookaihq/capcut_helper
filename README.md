@@ -33,14 +33,33 @@ npm run test                   # Vitest
 
 ## 发版
 
-1. 改 `backend/app/__init__.py::__version__` 为新版本号（例如 `"0.1.1"`）。这是版本号的唯一手写处，hatchling 会让 `pyproject.toml` 的元数据自动跟上。
-2. `git commit -m "chore: bump to 0.1.1"`
-3. `git tag v0.1.1 && git push --tags`（tag 必须用 `v` + SemVer，update_checker 按这个格式解析）
-4. `bash scripts/build_mac.sh` 生成 `dist/capcut_helper.app` 和 `dist/capcut_helper.zip`
-5. 在 GitHub 上创建 release（tag 选 `v0.1.1`），**上传 `dist/capcut_helper.zip` 作为资产，资产名必须是 `capcut_helper.zip`**（与 `scripts/build_mac.sh` 一致，update_checker 按这个名字匹配）
-6. release 的 body 写更新说明——这就是横幅「查看说明」按钮跳的页面内容
+### 一次性准备（只做一次）
+
+1. 配 `origin` 远端到 GitHub 仓库（HTTPS 形式，凭据嵌 URL 或用系统 credential helper 都可以）
+2. 在项目根放 `.github-token` 文件，内容是有 `contents:write` 权限的 fine-grained PAT（**已 gitignore**）
+   - 生成路径：GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
+   - Repository access：只勾本仓库
+   - Permissions → Repository → Contents：Read and write
+
+### 每次发版
+
+```bash
+# 1. bump 版本号
+vi backend/app/__init__.py        # 改 __version__ 为新版本，例如 "0.1.1"
+git commit -am "chore: bump to 0.1.1"
+
+# 2. 一条命令发布
+bash scripts/release.sh                   # 不带 release notes
+bash scripts/release.sh notes-0.1.1.md    # 用 markdown 文件作 release body
+```
+
+`scripts/release.sh` 会按顺序完成：跑测试 → 构建 .app/.zip → push main → push tag `v0.1.1` →
+调 GitHub API 创建 release → 上传 `capcut_helper.zip` 资产。失败时会指出已推 tag 怎么清理。
 
 发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.1」横幅。
+
+> **版本号约定**：tag 必须 `v` + SemVer（`update_checker._strip_v_prefix` 按这个格式解析）；
+> zip 资产名必须是 `capcut_helper.zip`（`scripts/build_mac.sh` 产物名 + `services/update_checker.py::ASSET_NAME` 匹配该名）。脚本已硬编码这两个约定，按它来就行。
 
 ## 打包成 .app 分发
 

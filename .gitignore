@@ -11,3 +11,6 @@
 
 # 项目根的临时测试素材（大文件 mp4）
 /tests/
+
+# scripts/release.sh 用的 GitHub PAT（含发版权限，泄漏即被滥用）
+.github-token
