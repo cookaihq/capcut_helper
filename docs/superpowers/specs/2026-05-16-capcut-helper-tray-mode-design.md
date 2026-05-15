@@ -43,14 +43,14 @@
 1. 后端 FastAPI 守护线程起来
 2. 状态栏 / 托盘出现图标
 3. **同时弹出主窗口**（这是用户「双击应用看到窗口」的心智模型）
-4. macOS 启动时 `setActivationPolicy_(NSApplicationActivationPolicyRegular)`（默认），Dock 有图标
+4. macOS：默认就是 `.regular`（PyInstaller `.app` bundle 不设 `LSUIElement`，由 macOS 自动给的策略），Dock 有图标——无需显式切
 
 ### 3.2 关闭窗口行为
 
 | 触发 | macOS 行为 | Windows 行为 |
 |---|---|---|
 | 红色 × / Cmd+W | closing 事件 → hide + 切 `.accessory` + cancel 关闭 | closing 事件 → hide + cancel 关闭 |
-| Cmd+Q | 走自建主菜单 action → on_quit（**完整退出**） | N/A |
+| Cmd+Q | 走被我们替换 action 的 pywebview 默认 Quit 项 → on_quit（**完整退出**） | N/A |
 | Alt+F4 | N/A | closing 事件（同 ×） |
 
 关闭窗口后：
@@ -75,7 +75,7 @@
 ### 3.4 完整退出行为
 
 `on_quit()` 触发后：
-1. macOS：`setActivationPolicy_(.regular)`（防止 destroy 时残留 accessory 状态），Windows：no-op
+1. macOS：若当前是 `.accessory`，切回 `.regular` 让 Dock 图标在 destroy 前短暂回到位（cosmetic：避免「窗口先一闪、Dock 才显示」的视觉错位）。Windows：no-op。实现阶段实测可省略
 2. `tray.teardown()`：mac 移除 NSStatusItem；win 调 `pystray.Icon.stop()` 让托盘线程退出
 3. `window.destroy()`：pywebview 销毁窗口并退出主循环
 4. `webview.start()` 返回 → `main()` 返回 → Python 进程退出
@@ -120,14 +120,19 @@ class TrayPlatform(Protocol):
 4. bridge = NativeBridge()
 5. window = webview.create_window(..., js_api=bridge)      # 不变
 6. bridge.window = window
-7. tray_callbacks = build_tray_callbacks(window, tray)     # 新增
+7. tray_callbacks = build_tray_callbacks(window, tray)     # 新增（on_open / on_check_update / on_quit）
 8. window.events.closing += on_closing                     # 新增（cancelable）
 9. webview.start(func=tray.install,                        # 修改
-                 func_args=(window, *tray_callbacks))
+                 args=(window, *tray_callbacks))
 10. webview.start() 返回 → main() 返回 → 进程结束
 ```
 
-**`webview.start(func=...)`** 的回调在 NSApp / WinForms 主循环启动后立刻在主线程执行，是 PyObjC 创建 NSStatusItem / pystray 启动子线程的安全时机。
+**关键时机说明**：`webview.start(func=..., args=...)` 中 `func` **在子线程里执行**（pywebview 5.x 实测：内部 `threading.Thread(target=func, args=args).start()`）。这影响两个平台：
+
+- **macOS**：NSStatusBar / NSMenu / setActivationPolicy_ 必须在主线程调用。`_tray_macos.install()` 内部用 `from PyObjCTools import AppHelper; AppHelper.callAfter(_real_install)` 把实际安装代码派回主线程
+- **Windows**：pystray 的 `icon.run()` 在子线程跑是 pystray 标准用法。`_tray_windows.install()` 在 `webview.start` 派发的子线程里再 spawn 一个 daemon 子线程跑 `icon.run()`（套两层 daemon 线程没问题）
+
+`tray.install()` 不阻塞 `webview.start` 派发的那个子线程——派发完任务后立刻返回，让那个子线程结束（macOS：派发到 AppHelper 后返回；Windows：spawn icon 线程后返回）。
 
 ## 6. closing 事件回调
 
@@ -175,25 +180,39 @@ def _set_dock_visible():
     AppKit.NSApp.setActivationPolicy_(AppKit.NSApplicationActivationPolicyRegular)
 ```
 
-**自建主菜单**（拦 Cmd+Q）：
+**拦 Cmd+Q（替换 pywebview 默认 Quit 项的 action）**：
+
+读 pywebview 5.x cocoa 后端源码（`_add_app_menu`）确认：pywebview **始终** `setMainMenu_`，自带一个 Quit 项 —— 标题来自 `localization['cocoa.menu.quit']`，action = `terminate:`（即 `NSApp.terminate:`），keyEquivalent = `"q"`。Cmd+Q 默认走这一项 → `NSApp.terminate:` → `applicationShouldTerminate_` → `should_close()` → `closing` event。
+
+**不能** 自己 `setMainMenu_` 覆盖（既会丢掉 pywebview 默认的「关于 / 隐藏 / 显示全部」标准项，也依赖 pywebview 不重建菜单的脆弱前提）。**正确做法**：在 pywebview 设完默认菜单后，**只修改 Quit 项的 action 和 target**。
 
 ```python
-main_menu = AppKit.NSMenu.alloc().init()
-app_menu_item = AppKit.NSMenuItem.alloc().init()
-main_menu.addItem_(app_menu_item)
+class _QuitTarget(AppKit.NSObject):
+    """承载 onUserQuit: selector 的 PyObjC 对象。必须强引用（pywebview 之外的代码持有）。"""
+    def initWithCallback_(self, callback):
+        self = AppKit.NSObject.init(self)
+        self._callback = callback
+        return self
 
-app_menu = AppKit.NSMenu.alloc().init()
-quit_item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-    "退出 capcut_helper", b"onQuitFromMenu:", "q"
-)
-quit_item.setTarget_(menu_target)   # menu_target 是持有 on_quit 的 PyObjC 对象
-app_menu.addItem_(quit_item)
-app_menu_item.setSubmenu_(app_menu)
+    def onUserQuit_(self, sender):
+        self._callback()
 
-AppKit.NSApp.setMainMenu_(main_menu)
+def _replace_quit_action(on_quit_callback):
+    """在主线程调用。遍历 NSApp.mainMenu 第一个子菜单（app menu），找到 Cmd+Q 项，替换 action。"""
+    target = _QuitTarget.alloc().initWithCallback_(on_quit_callback)
+    main_menu = AppKit.NSApp.mainMenu()
+    app_menu = main_menu.itemArray()[0].submenu()
+    for item in app_menu.itemArray():
+        if item.keyEquivalent() == "q":
+            item.setAction_(b"onUserQuit:")
+            item.setTarget_(target)
+            return target   # 调用方持有，防 GC
+    raise RuntimeError("pywebview default Quit menu item not found — pywebview API changed?")
 ```
 
-pywebview 当前在不传 `window.menu` 参数时不会自己调 `setMainMenu_`，所以这里直接覆盖不会冲突。
+**为什么我们的修改不会被 pywebview 覆盖**：cocoa 后端只在 `windowDidBecomeKey_` 里、当 `i.menu and BrowserView.current_menu != i.menu` 时调 `_recreate_menus`。我们**不传 `window.menu`** 参数，`i.menu = None`，永远不进重建分支 → 我们的 setAction_/setTarget_ 持久。
+
+**调用时机**：在 `install()` 里用 `AppHelper.callAfter` 派发到主线程；时机上必须在 pywebview 第一个 window 的 `.show()` 之后（菜单建好之后）。pywebview 的 window.show 在 webview.start() 主线程同步路径里调，而我们 callAfter 出去的代码会在主循环 idle 时执行 —— 此时菜单一定已建。如担心时序，可监听 `window.events.shown` 事件再触发替换。
 
 **Dock 切换顺序敏感**：
 - hide 时 **先 hide 窗口、再切 accessory**（避免空 Dock 图标闪一下）
@@ -351,6 +370,7 @@ dependencies = [
 - 异常退出（kill -9 / 系统强关）不做 graceful shutdown — 文档说明「正常退出请走状态栏『退出』或 ⌘Q」
 - Windows 剪映自定义草稿目录：如本次实测拿不到剪映 Win 版的等价配置位置，则保留 `bridge.py` 现有 TODO，README 已知限制章节补一行
 - 系统注销 / 关机触发的 NSApp terminate 会走 `applicationShouldTerminate_` → `should_close()` → `closing` event → 被拦截为「隐藏」。这种 corner case macOS 会强 kill，可以接受
+- **pywebview 升级回归风险**：替换 Quit 项 action 依赖 pywebview cocoa 后端 `_add_app_menu` 的实现细节（Quit 项 keyEquivalent="q"、位于 mainMenu 第一个子菜单）。pywebview 升级后必须重测 Cmd+Q 是否仍走我们的 on_quit。手动测试矩阵覆盖此项；若 pywebview 改了菜单结构，`_replace_quit_action` 会抛 `RuntimeError`，提示需要更新
 
 ## 12. README 增量
 
