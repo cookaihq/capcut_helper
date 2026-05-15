@@ -53,11 +53,11 @@ wheels = [
 
 [[package]]
 name = "capcut-helper-backend"
-version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "packaging" },
     { name = "platformdirs" },
     { name = "pyjianyingdraft" },
     { name = "pywebview" },
@@ -76,6 +76,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "packaging", specifier = ">=24.0" },
     { name = "platformdirs", specifier = ">=4.0" },
     { name = "pyjianyingdraft", specifier = ">=0.2.6" },
     { name = "pywebview", specifier = ">=5.0" },
