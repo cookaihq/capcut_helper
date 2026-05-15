@@ -53,7 +53,7 @@ PyInstaller 自动嵌入：
 - `frontend/dist/`（React 构建产物），运行时挂在 FastAPI `StaticFiles`
 - pyJianYingDraft 自带的资源文件（如 `DRAFT_META_TEMPLATE`），用 `collect_data_files('pyJianYingDraft')` 收集
 
-通过 `collect_all('pywebview')` 兜底 pywebview 的所有子模块（macOS 后端 `pywebview.platforms.cocoa` 历来是 PyInstaller 易漏的 hidden import，`collect_all` 一并解决数据 + 模块）。
+通过 `collect_all('webview')` 兜底 pywebview 的所有子模块。**注意 import 名**：PyPI 分发名是 `pywebview` 但 Python 导入名 / `collect_all` 参数是 `webview`（实测过：传错名 PyInstaller 仅打印 "not a package" 警告、返回空 tuple，pyobjc/Cocoa 桥不进 bundle，启动失败）。macOS 后端 `webview.platforms.cocoa` 历来是 PyInstaller 易漏的 hidden import，`collect_all('webview')` 一并解决数据 + 模块。
 
 ## 5. 运行时路径解析
 
@@ -104,7 +104,7 @@ PyInstaller 加进 `backend/pyproject.toml` 的 `[dependency-groups] dev`（不�
 
 - `Analysis(['app/main.py'], ...)`
 - `datas` 含 frontend/dist + `collect_data_files('pyJianYingDraft')`
-- `hiddenimports` + `collect_submodules('pywebview')` 或直接 `collect_all('pywebview')`
+- `hiddenimports` + `collect_submodules('webview')` 或直接 `collect_all('webview')`（参数是 import 名 `webview`，不是 PyPI 分发名 `pywebview`）
 - `BUNDLE` 段输出 `.app`，`name='capcut_helper.app'`，`bundle_identifier='com.cookaihq.capcut_helper'`（与 git 身份 cookaihq 对齐；未来若启用代码签名不要再随便改这个值，否则身份漂移），`info_plist` 至少含 `CFBundleName='capcut_helper'`
 
 `capcut_helper/.gitignore` 加 `build/` 和 `dist/`（PyInstaller 在项目根产生这俩目录）。
@@ -144,7 +144,7 @@ PyInstaller 自身的产物结构无法在 pytest 里验证——只能靠手动
 ## 9. 已知风险 & 后续项
 
 **实现阶段需验证**：
-- pywebview 在 Mac 上的 hidden imports 是否完全被 `collect_all('pywebview')` 覆盖。若 .app 启动报 `ModuleNotFoundError`，按报错补 `hiddenimports`
+- pywebview 在 Mac 上的 hidden imports 是否完全被 `collect_all('webview')` 覆盖。若 .app 启动报 `ModuleNotFoundError`，按报错补 `hiddenimports`
 - `libmediainfo.dylib`（pymediainfo 的原生依赖）是否被 PyInstaller 钩子自动 pick up。若不行，手动 `binaries=[(...)]`
 - pyJianYingDraft 内部对自带模板路径的解析是否兼容 bundle 内的相对路径
 

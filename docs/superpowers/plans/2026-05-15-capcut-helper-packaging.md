@@ -294,7 +294,9 @@ Expected: 打印一个 6.x 版本号，例如 `6.11.1`。
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
 # pywebview Mac 后端 hidden imports + 数据文件一次性收齐
-pywebview_datas, pywebview_binaries, pywebview_hiddenimports = collect_all("pywebview")
+# 注意:PyPI 分发名是 pywebview,但 import 名 / collect_all 参数是 "webview"
+# (变量名前缀 pywebview_* 是为可读,不影响功能)
+pywebview_datas, pywebview_binaries, pywebview_hiddenimports = collect_all("webview")
 # pyJianYingDraft 自带的模板等资源（如 DRAFT_META_TEMPLATE）
 jianying_datas = collect_data_files("pyJianYingDraft")
 
@@ -453,7 +455,7 @@ Run: `ls -la capcut_helper/dist/`
 Expected: 至少看到 `capcut_helper.app/` 和 `capcut_helper.zip`。
 
 Run: `du -sh capcut_helper/dist/capcut_helper.app capcut_helper/dist/capcut_helper.zip`
-Expected: `.app` 约 200-400 MB（含 Python 解释器、numpy、Pillow 等），`.zip` 约 70-150 MB（ditto 压缩比）。具体数值不严格，只要不是 KB 级（说明几乎是空的）就行。
+Expected: `.app` 约 70-100 MB，`.zip` 约 30-40 MB（ditto 压缩比）。实测 ~74 MB / ~35 MB。比直觉小是因为 pyobjc 等只是绑系统框架(WebKit.framework 等留在 /System/Library)而非打包整框架。具体数值不严格，只要不是 KB 级（说明几乎是空的）就行。
 
 Run: `file capcut_helper/dist/capcut_helper.app/Contents/MacOS/capcut_helper`
 Expected: 输出含 `Mach-O 64-bit executable arm64`（架构对得上 M 系列 Mac）。
