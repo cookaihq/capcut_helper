@@ -6,7 +6,11 @@ from app.schemas.update import UpdateInfo
 
 GITHUB_OWNER = "cookaihq"
 GITHUB_REPO = "capcut_helper"
-ASSET_NAME = "capcut_helper.zip"
+
+
+def _asset_name_for_tag(tag: str) -> str:
+    """根据 release tag 构造期望的资产名。tag 形如 'v0.2.0'。"""
+    return f"capcut_helper-arm64-{tag}.dmg"
 
 
 def _strip_v_prefix(tag: str) -> str:
@@ -23,7 +27,7 @@ def _is_newer(latest: str, current: str) -> bool:
 
 async def check_for_update(current_version: str) -> UpdateInfo:
     try:
-        raw = await fetch_latest_release(GITHUB_OWNER, GITHUB_REPO, ASSET_NAME)
+        raw = await fetch_latest_release(GITHUB_OWNER, GITHUB_REPO)
     except GitHubReleaseError as e:
         return UpdateInfo(
             current_version=current_version,
@@ -31,12 +35,18 @@ async def check_for_update(current_version: str) -> UpdateInfo:
             error=str(e),
         )
 
+    expected = _asset_name_for_tag(raw.tag_name)
+    download_url = next(
+        (a.download_url for a in raw.assets if a.name == expected),
+        None,
+    )
+
     latest = _strip_v_prefix(raw.tag_name)
     return UpdateInfo(
         current_version=current_version,
         latest_version=latest,
         has_update=_is_newer(latest, current_version),
         release_url=raw.release_url,
-        download_url=raw.download_url,
+        download_url=download_url,
         notes=raw.notes,
     )

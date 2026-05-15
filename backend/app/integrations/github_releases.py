@@ -8,22 +8,28 @@ _USER_AGENT = "capcut_helper"
 
 
 @dataclass
+class ReleaseAsset:
+    name: str
+    download_url: str
+
+
+@dataclass
 class ReleaseRaw:
     tag_name: str
     release_url: str
     notes: str
-    download_url: str | None
+    assets: list[ReleaseAsset]
 
 
 class GitHubReleaseError(Exception):
     """GitHub Releases API 调用失败或响应异常。统一兜底类型，供 service 层 catch。"""
 
 
-async def fetch_latest_release(owner: str, repo: str, asset_name: str) -> ReleaseRaw:
+async def fetch_latest_release(owner: str, repo: str) -> ReleaseRaw:
     """GET https://api.github.com/repos/{owner}/{repo}/releases/latest
 
     任何错误（网络异常、超时、HTTP 非 2xx、JSON 解析失败、缺 tag_name）→ 抛 GitHubReleaseError。
-    成功但 assets 里找不到 asset_name → download_url=None，其余字段照常返回。
+    成功时返回 ReleaseRaw，含全部 assets（命名匹配交给上层）。
     """
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
     try:
@@ -44,15 +50,15 @@ async def fetch_latest_release(owner: str, repo: str, asset_name: str) -> Releas
     if not isinstance(tag_name, str) or not tag_name:
         raise GitHubReleaseError("missing tag_name")
 
-    download_url = None
-    for asset in body.get("assets") or []:
-        if asset.get("name") == asset_name:
-            download_url = asset.get("browser_download_url")
-            break
+    assets = [
+        ReleaseAsset(name=a["name"], download_url=a["browser_download_url"])
+        for a in (body.get("assets") or [])
+        if isinstance(a.get("name"), str) and isinstance(a.get("browser_download_url"), str)
+    ]
 
     return ReleaseRaw(
         tag_name=tag_name,
         release_url=body.get("html_url") or "",
         notes=body.get("body") or "",
-        download_url=download_url,
+        assets=assets,
     )

@@ -24,8 +24,8 @@ _VALID_RESPONSE = {
     "body": "notes",
     "assets": [
         {
-            "name": "capcut_helper.zip",
-            "browser_download_url": "https://x/zip",
+            "name": "capcut_helper-arm64-v0.2.0.dmg",
+            "browser_download_url": "https://x/asset",
         }
     ],
 }
@@ -44,7 +44,7 @@ def test_update_check_returns_envelope(client):
     data = body["data"]
     assert data["has_update"] is True
     assert data["latest_version"] == "0.2.0"
-    assert data["download_url"] == "https://x/zip"
+    assert data["download_url"] == "https://x/asset"
 
 
 @respx.mock
