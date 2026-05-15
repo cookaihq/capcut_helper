@@ -54,12 +54,12 @@ bash scripts/release.sh notes-0.1.1.md    # 用 markdown 文件作 release body
 ```
 
 `scripts/release.sh` 会按顺序完成：跑测试 → 构建 .app/.zip → push main → push tag `v0.1.1` →
-调 GitHub API 创建 release → 上传 `capcut_helper.zip` 资产。失败时会指出已推 tag 怎么清理。
+调 GitHub API 创建 release → 上传 `capcut_helper-arm64-v<version>.dmg` 资产。失败时会指出已推 tag 怎么清理。
 
 发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.1」横幅。
 
 > **版本号约定**：tag 必须 `v` + SemVer（`update_checker._strip_v_prefix` 按这个格式解析）；
-> zip 资产名必须是 `capcut_helper.zip`（`scripts/build_mac.sh` 产物名 + `services/update_checker.py::ASSET_NAME` 匹配该名）。脚本已硬编码这两个约定，按它来就行。
+> dmg 资产名必须是 `capcut_helper-arm64-v<version>.dmg`（`scripts/build_mac.sh` 产物名 + `services/update_checker.py::_asset_name_for_tag()` 按 tag 模板构造该名）。脚本已硬编码这两个约定，按它来就行。
 
 ## 打包成 .app 分发
 
@@ -70,16 +70,17 @@ bash scripts/build_mac.sh
 产物：
 
 - `dist/capcut_helper.app` —— 双击运行
-- `dist/capcut_helper.zip` —— 分发用，用 Apple 推荐的 `ditto` 打包（保留符号链接）
+- `dist/capcut_helper-arm64-v<version>.dmg` —— 分发用，hdiutil 打 UDZO 压缩 dmg
 
 ## 分发给同事
 
-把 `dist/capcut_helper.zip` 发给对方，请对方按以下步骤：
+把 `dist/capcut_helper-arm64-v<version>.dmg` 发给对方，请对方按以下步骤：
 
-1. 解压 zip，把 `capcut_helper.app` 拖到 `~/Applications` 或任意位置
-2. **首次打开**：因为未做代码签名，macOS 会拦截。**右键 → 打开 → 在弹窗里再点「打开」**，之后双击就行。或在「系统设置 → 隐私与安全」里允许。
-3. **首次访问草稿目录时**，近版 macOS 会再弹一个文件夹访问权限提示（针对 `~/Movies` 或自定义草稿目录），点「允许」即可
-4. 启动后第一次进 GUI，按「设置」标签里的「自动探测」找剪映草稿目录，或手动选择
+1. 双击 `capcut_helper-arm64-v<version>.dmg` 挂载
+2. 在弹出的 Finder 窗口里把 `capcut_helper.app` 拖到旁边的 `Applications` 软链上
+3. **首次打开**：因为未做代码签名，macOS 会拦截。**右键 → 打开 → 在弹窗里再点「打开」**，之后双击就行。或在「系统设置 → 隐私与安全」里允许。
+4. **首次访问草稿目录时**，近版 macOS 会再弹一个文件夹访问权限提示（针对 `~/Movies` 或自定义草稿目录），点「允许」即可
+5. 启动后第一次进 GUI，按「设置」标签里的「自动探测」找剪映草稿目录，或手动选择
 
 应用窗口里的「活动」「草稿」「设置」三个标签——其中「设置」配剪映草稿根目录是首次必做的事。
 
