@@ -23,3 +23,4 @@ def test_update_info_full_fields():
     )
     assert info.has_update is True
     assert info.latest_version == "0.2.0"
+    assert info.error is None
