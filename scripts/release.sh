@@ -148,7 +148,7 @@ if [ -z "$UPLOAD_URL" ]; then
   exit 1
 fi
 
-# ---------- 上传 zip 资产 ----------
+# ---------- 上传 dmg 资产 ----------
 
 echo "→ 上传 $DMG_NAME"
 ASSET_JSON=$(curl -sf -X POST \
