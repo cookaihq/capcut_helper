@@ -52,6 +52,7 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 TAG="v$VERSION"
+DMG_NAME="capcut_helper-arm64-v${VERSION}.dmg"
 echo "→ 准备发 $TAG"
 
 if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -86,10 +87,10 @@ echo "→ 跑前端测试"
 
 # ---------- 构建 ----------
 
-echo "→ 构建 .app + .zip"
+echo "→ 构建 .app + .dmg"
 bash scripts/build_mac.sh
-if [ ! -f dist/capcut_helper.zip ]; then
-  echo "✗ 构建未产出 dist/capcut_helper.zip"
+if [ ! -f "dist/$DMG_NAME" ]; then
+  echo "✗ 构建未产出 dist/$DMG_NAME"
   exit 1
 fi
 
@@ -149,12 +150,12 @@ fi
 
 # ---------- 上传 zip 资产 ----------
 
-echo "→ 上传 capcut_helper.zip"
+echo "→ 上传 $DMG_NAME"
 ASSET_JSON=$(curl -sf -X POST \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/zip" \
-  --data-binary @dist/capcut_helper.zip \
-  "${UPLOAD_URL}?name=capcut_helper.zip") || {
+  -H "Content-Type: application/x-apple-diskimage" \
+  --data-binary @"dist/$DMG_NAME" \
+  "${UPLOAD_URL}?name=$DMG_NAME") || {
     echo "✗ 上传资产失败。release 已创建但缺资产，需要手动在 web UI 上传或重传。"
     echo "  release 页：https://github.com/$REPO_PATH/releases/tag/$TAG"
     exit 1
@@ -165,4 +166,4 @@ ASSET_JSON=$(curl -sf -X POST \
 echo ""
 echo "✓ 发布完成"
 echo "  release: https://github.com/$REPO_PATH/releases/tag/$TAG"
-echo "  下载链接: https://github.com/$REPO_PATH/releases/download/$TAG/capcut_helper.zip"
+echo "  下载链接: https://github.com/$REPO_PATH/releases/download/$TAG/$DMG_NAME"
