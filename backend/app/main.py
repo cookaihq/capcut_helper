@@ -51,8 +51,18 @@ def main() -> None:
     bridge.window = window
 
     tray = create_tray_platform()
-    # 「检查更新」目前先 no-op；Task 7 接入 update_checker 业务
-    callbacks = build_tray_callbacks(window, tray, on_check_update=lambda: None)
+
+    callbacks = None  # forward declaration（菜单点击时 callbacks 已 binding 完成）
+
+    def on_check_update_clicked():
+        """状态栏菜单「检查更新」：先打开面板，再让前端横幅 UI 重查。"""
+        callbacks.on_open()
+        # 前端 capcut-helper:check-update 监听是 follow-up，未监听时 evaluate_js 不报错
+        window.evaluate_js(
+            "window.dispatchEvent(new CustomEvent('capcut-helper:check-update'))"
+        )
+
+    callbacks = build_tray_callbacks(window, tray, on_check_update=on_check_update_clicked)
     window.events.closing += callbacks.on_closing
 
     webview.start(
