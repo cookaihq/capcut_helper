@@ -1,2 +1,7 @@
 # Visual-companion brainstorming session files (not source)
 .superpowers/
+
+# PyInstaller 构建产物（由 scripts/build_mac.sh 产生于项目根）
+# 用前置 / 锚定到本 .gitignore 所在目录，避免误盖 frontend/dist
+/build/
+/dist/
