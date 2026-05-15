@@ -31,6 +31,17 @@ npm run dev                    # http://localhost:3176
 npm run test                   # Vitest
 ```
 
+## 发版
+
+1. 改 `backend/app/__init__.py::__version__` 为新版本号（例如 `"0.1.1"`）。这是版本号的唯一手写处，hatchling 会让 `pyproject.toml` 的元数据自动跟上。
+2. `git commit -m "chore: bump to 0.1.1"`
+3. `git tag v0.1.1 && git push --tags`（tag 必须用 `v` + SemVer，update_checker 按这个格式解析）
+4. `bash scripts/build_mac.sh` 生成 `dist/capcut_helper.app` 和 `dist/capcut_helper.zip`
+5. 在 GitHub 上创建 release（tag 选 `v0.1.1`），**上传 `dist/capcut_helper.zip` 作为资产，资产名必须是 `capcut_helper.zip`**（与 `scripts/build_mac.sh` 一致，update_checker 按这个名字匹配）
+6. release 的 body 写更新说明——这就是横幅「查看说明」按钮跳的页面内容
+
+发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.1」横幅。
+
 ## 打包成 .app 分发
 
 ```bash
