@@ -5,3 +5,9 @@
 # 用前置 / 锚定到本 .gitignore 所在目录，避免误盖 frontend/dist
 /build/
 /dist/
+
+# macOS 系统文件
+.DS_Store
+
+# 项目根的临时测试素材（大文件 mp4）
+/tests/
