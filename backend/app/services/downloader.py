@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import os
 import re
 from pathlib import Path
 
@@ -79,7 +80,14 @@ async def _download_one(
                 # 抛 ValueError 走重试逻辑：上游可能瞬时返回错误页，重试一下也许能拿到正确内容
                 raise ValueError(invalid_reason)
 
-            dest.write_bytes(body)
+            # 用 fsync 强制刷盘：APFS 默认延迟一致，write_bytes 后立即被 libmediainfo
+            # 通过 C 层 open() 读取，可能拿到 metadata 不稳定的状态导致解析失败
+            fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+            try:
+                os.write(fd, body)
+                os.fsync(fd)
+            finally:
+                os.close(fd)
             return material.url, dest
         except Exception as exc:  # noqa: BLE001 — 下载失败统一兜底重试
             last_error = exc
