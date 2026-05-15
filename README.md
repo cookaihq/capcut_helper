@@ -53,7 +53,7 @@ bash scripts/release.sh                   # 不带 release notes
 bash scripts/release.sh notes-0.1.1.md    # 用 markdown 文件作 release body
 ```
 
-`scripts/release.sh` 会按顺序完成：跑测试 → 构建 .app/.zip → push main → push tag `v0.1.1` →
+`scripts/release.sh` 会按顺序完成：跑测试 → 构建 .app/.dmg → push main → push tag `v0.1.1` →
 调 GitHub API 创建 release → 上传 `capcut_helper-arm64-v<version>.dmg` 资产。失败时会指出已推 tag 怎么清理。
 
 发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.1」横幅。
