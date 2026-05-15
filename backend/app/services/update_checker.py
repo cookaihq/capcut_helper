@@ -1,3 +1,5 @@
+import sys
+
 from packaging.version import InvalidVersion, Version
 
 from app.integrations.github_releases import GitHubReleaseError, fetch_latest_release
@@ -10,7 +12,11 @@ GITHUB_REPO = "capcut_helper"
 
 def _asset_name_for_tag(tag: str) -> str:
     """根据 release tag 构造期望的资产名。tag 形如 'v0.2.0'。"""
-    return f"capcut_helper-arm64-{tag}.dmg"
+    if sys.platform == "darwin":
+        return f"capcut_helper-arm64-{tag}.dmg"
+    if sys.platform == "win32":
+        return f"capcut_helper-x64-{tag}.zip"
+    raise NotImplementedError(f"unsupported platform: {sys.platform}")
 
 
 def _strip_v_prefix(tag: str) -> str:

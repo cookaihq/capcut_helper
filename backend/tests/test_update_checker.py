@@ -1,3 +1,7 @@
+import sys
+
+import pytest
+
 from app.integrations.github_releases import (
     GitHubReleaseError,
     ReleaseAsset,
@@ -77,7 +81,7 @@ async def test_adapter_error_returns_no_update_with_error_field(monkeypatch):
 
 
 async def test_no_matching_asset_returns_none_download_url(monkeypatch):
-    """release 上传了错名的资产（如 .zip 而非 .dmg）→ has_update 仍 True，但 download_url=None"""
+    """release 上传了错名的资产（资产名与期望平台格式不符）→ has_update 仍 True，但 download_url=None"""
     await _patch_fetch(
         monkeypatch,
         returns=_release(tag="v0.2.0", asset_name="capcut_helper-arm64-v0.2.0.zip"),
@@ -100,3 +104,19 @@ async def test_empty_assets_returns_none_download_url(monkeypatch):
     info = await check_for_update("0.1.0")
     assert info.has_update is True
     assert info.download_url is None
+
+
+def test_asset_name_for_tag_on_darwin(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert _asset_name_for_tag("v0.2.0") == "capcut_helper-arm64-v0.2.0.dmg"
+
+
+def test_asset_name_for_tag_on_win32(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert _asset_name_for_tag("v0.2.0") == "capcut_helper-x64-v0.2.0.zip"
+
+
+def test_asset_name_for_tag_unsupported_platform(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    with pytest.raises(NotImplementedError, match="linux"):
+        _asset_name_for_tag("v0.2.0")
