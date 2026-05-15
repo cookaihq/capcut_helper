@@ -13,7 +13,7 @@
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
 # pywebview Mac 后端 hidden imports + 数据文件一次性收齐
-pywebview_datas, pywebview_binaries, pywebview_hiddenimports = collect_all("pywebview")
+pywebview_datas, pywebview_binaries, pywebview_hiddenimports = collect_all("webview")
 # pyJianYingDraft 自带的模板等资源（如 DRAFT_META_TEMPLATE）
 jianying_datas = collect_data_files("pyJianYingDraft")
 
