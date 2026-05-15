@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,10 +29,11 @@ class NativeBridge:
 
     def reveal_in_os(self, path: str) -> None:
         """在系统文件管理器里定位该路径。"""
+        normalized = os.path.normpath(path)
         if sys.platform == "darwin":
-            subprocess.run(["open", "-R", path], check=False)
+            subprocess.run(["open", "-R", normalized], check=False)
         elif sys.platform == "win32":
-            subprocess.run(["explorer", "/select,", path], check=False)
+            subprocess.run(["explorer", "/select,", normalized], check=False)
 
     def detect_draft_root(self) -> Optional[str]:
         """按平台推断剪映默认草稿目录，存在则返回路径字符串，否则 None。"""

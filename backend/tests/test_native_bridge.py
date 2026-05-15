@@ -1,5 +1,8 @@
+import os
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from app.native.bridge import NativeBridge
 
@@ -41,3 +44,31 @@ def test_detect_draft_root_unsupported_platform(tmp_path, monkeypatch):
 
     bridge = NativeBridge()
     assert bridge.detect_draft_root() is None
+
+
+def test_reveal_in_os_normalizes_path_on_darwin(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "darwin")
+    bridge = NativeBridge()
+    raw = "/Users/x/Movies//JianyingPro/../JianyingPro/draft"
+    expected = os.path.normpath(raw)  # 同一份 normpath 算期望值，平台无关
+    with patch.object(subprocess, "run") as mock_run:
+        bridge.reveal_in_os(raw)
+    mock_run.assert_called_once_with(["open", "-R", expected], check=False)
+
+
+def test_reveal_in_os_normalizes_path_on_win32(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    bridge = NativeBridge()
+    raw = "C:/Users/x/AppData/Local/JianyingPro/draft"
+    expected = os.path.normpath(raw)
+    with patch.object(subprocess, "run") as mock_run:
+        bridge.reveal_in_os(raw)
+    mock_run.assert_called_once_with(["explorer", "/select,", expected], check=False)
+
+
+def test_reveal_in_os_unsupported_platform_does_nothing(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+    bridge = NativeBridge()
+    with patch.object(subprocess, "run") as mock_run:
+        bridge.reveal_in_os("/foo/bar")
+    mock_run.assert_not_called()
