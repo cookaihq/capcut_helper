@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -9,8 +10,20 @@ from app.api.router import api_router
 from app.core.config import load_config
 from app.core.exceptions import register_exception_handlers
 
-# 前端构建产物目录：capcut_helper/frontend/dist
-_FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+def _resource_path(rel: str) -> Path:
+    """资源文件路径解析：
+    - 开发模式：从源码树解析（server.py 在 backend/app/，上跳两级到 capcut_helper/）
+    - PyInstaller 冻结后：从 sys._MEIPASS 解析（PyInstaller 在运行时把打进 bundle 的
+      data files 解压/映射到这个目录）
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / rel
+    return Path(__file__).resolve().parents[2] / rel
+
+
+# 前端构建产物目录
+_FRONTEND_DIST = _resource_path("frontend/dist")
 
 
 def create_app(port: int) -> FastAPI:
