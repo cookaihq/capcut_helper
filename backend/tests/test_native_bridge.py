@@ -144,3 +144,14 @@ def test_reveal_in_os_unsupported_platform_does_nothing(monkeypatch):
     with patch.object(subprocess, "run") as mock_run:
         bridge.reveal_in_os("/foo/bar")
     mock_run.assert_not_called()
+
+
+def test_open_url_invokes_webbrowser(monkeypatch):
+    from app.native.bridge import NativeBridge
+
+    called = []
+    monkeypatch.setattr("webbrowser.open", lambda url: called.append(url))
+
+    bridge = NativeBridge()
+    bridge.open_url("https://example.com/foo")
+    assert called == ["https://example.com/foo"]

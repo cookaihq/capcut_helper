@@ -68,3 +68,8 @@ class NativeBridge:
             return None
         candidate = Path.home() / relative
         return str(candidate) if candidate.is_dir() else None
+
+    def open_url(self, url: str) -> None:
+        """用系统默认浏览器打开 URL（跳出 pywebview 窗口）。"""
+        import webbrowser
+        webbrowser.open(url)
