@@ -9,6 +9,7 @@ from app.core.config import load_config
 from app.core.logging import setup_logging
 from app.core.port import select_port
 from app.native.bridge import NativeBridge
+from app.native.tray import build_tray_callbacks, create_tray_platform
 from app.server import create_app
 
 
@@ -48,7 +49,17 @@ def main() -> None:
         height=640,
     )
     bridge.window = window
-    webview.start()
+
+    tray = create_tray_platform()
+    # 「检查更新」目前先 no-op；Task 7 接入 update_checker 业务
+    callbacks = build_tray_callbacks(window, tray, on_check_update=lambda: None)
+    window.events.closing += callbacks.on_closing
+
+    webview.start(
+        func=lambda: tray.install(
+            window, callbacks.on_open, callbacks.on_check_update, callbacks.on_quit
+        ),
+    )
 
 
 if __name__ == "__main__":
