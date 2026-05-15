@@ -13,35 +13,28 @@
 
 ### 2.1 核心范围（本 spec）
 
-- macOS arm64 `.app` bundle（PyInstaller）
+- macOS arm64 `.app` bundle（PyInstaller），打成 `dist/capcut_helper-arm64-v<version>.dmg`（hdiutil UDZO 压缩，含 .app + Applications 软链）
 - 一条命令的构建脚本：拉前端构建产物 + 跑 PyInstaller
 - 顺手修掉 Plan 2 final review 里 flag 的 `reveal_in_os` Windows 路径分隔符未归一化
 
 ### 2.2 非目标
 
 - **代码签名 / Apple 公证**：内部分发，用户首次打开手动绕过 Gatekeeper（README 说明）
-- **DMG / 安装器**：直接 zip `.app` 分发
 - **Windows .exe**：用户在 Mac 上、PyInstaller 不能交叉编译；同事也多为 Mac。真有 Windows 需求时再单独立计划（GitHub Actions 或借 Windows 机器）
 - **auto-update**：手动重新分发新版本
 - **Intel Mac（universal2）**：见 §9 已知后续项，不是简单的 flag 切换
 
 ## 3. 工具与产物
 
-**工具**：PyInstaller。理由：pywebview + FastAPI + pyJianYingDraft 这种「Python + WebView + 资源文件」组合在 pywebview 官方文档与社区里几乎都是 PyInstaller。py2app 在 pywebview 场景实例少；Briefcase（BeeWare）一站式打包/签名/分发对「zip 一个 .app 给同事」属于过度方案。
+**工具**：PyInstaller（打 .app）+ `hdiutil`（macOS 内置，把 .app 打成 dmg）。理由：pywebview + FastAPI + pyJianYingDraft 这种「Python + WebView + 资源文件」组合在 pywebview 官方文档与社区里几乎都是 PyInstaller。py2app 在 pywebview 场景实例少；Briefcase（BeeWare）一站式打包/签名/分发对「dmg 一个 .app 给同事」属于过度方案。hdiutil 系统自带、零额外依赖，UDZO 压缩比与 zip 接近，dmg 本身又是 macOS 用户最熟悉的安装包格式。
 
 **配置形式**：`.spec` 文件（不用 `--onefile` CLI 形式），便于声明 `datas` / `hiddenimports` / `BUNDLE` Mac `.app` 配置。
 
-**产物**：`capcut_helper/dist/capcut_helper.app`（项目级 `dist/`，不是 `backend/dist/`——构建脚本通过 `--distpath=../dist --workpath=../build` 显式定位）。
+**产物**：`capcut_helper/dist/capcut_helper.app` 和 `capcut_helper/dist/capcut_helper-arm64-v<version>.dmg`（项目级 `dist/`，不是 `backend/dist/`——构建脚本通过 `--distpath=../dist --workpath=../build` 显式定位）。
 
 **架构**：arm64-only（M 系列 Mac）。
 
-**分发**：用 Apple 官方推荐的 `ditto` 打 zip——`.app` 内有大量符号链接（Frameworks、Python 框架等），`zip -r` 不带 `-y` 会跟随符号链接、拷贝目标内容，对方解压后符号链接丢失可能导致 dyld 加载库失败。命令：
-
-```bash
-ditto -c -k --sequesterRsrc --keepParent dist/capcut_helper.app dist/capcut_helper.zip
-```
-
-首次打开因为未签名会弹 Gatekeeper 警告，需右键→打开或系统设置→隐私与安全里允许。首次访问剪映草稿目录（`~/Movies/JianyingPro/...`）时近版 macOS 会再弹一个文件夹访问权限提示，点允许即可。README 写清楚这两个提示。
+**分发**：直接发 `dist/capcut_helper-arm64-v<version>.dmg`。hdiutil UDZO 压缩，体积接近 zip。dmg 用户体验比 zip 优：双击挂载 → 拖 .app 到自带 Applications 软链 → 完成安装。
 
 ## 4. Bundle 内容
 
@@ -137,7 +130,7 @@ def reveal_in_os(self, path: str) -> None:
 5. 用 ai-canvas 或 curl POST 一个真实时间线规格，验证草稿能完整生成（前端构建产物 + pyJianYingDraft 资源 + libmediainfo 都被打进去了的端到端确认）
 
 **跨机器验证**（剥离开发机环境依赖）：
-- `zip -r capcut_helper.zip capcut_helper.app`，scp 到另一台 Mac（最好是没装 Python/uv 的）解压双击。若没有第二台 Mac，可创建一个干净的 macOS 用户账号登入测试。
+- scp `dist/capcut_helper-arm64-v<version>.dmg` 到另一台 Mac（最好是没装 Python/uv 的），双击挂载 → 拖 .app 到 Applications → 双击打开。若没有第二台 Mac，可创建一个干净的 macOS 用户账号登入测试。
 
 PyInstaller 自身的产物结构无法在 pytest 里验证——只能靠手动冒烟。
 
@@ -152,5 +145,4 @@ PyInstaller 自身的产物结构无法在 pytest 里验证——只能靠手动
 - **Windows .exe**：用 GitHub Actions windows-latest runner 或 Windows 物理机/VM 构建；流程基本对称，但需单独立计划做实测
 - **Intel Mac（universal2）**：不是简单 flag 切换。要求 numpy、Pillow、pyobjc、pymediainfo 等所有原生依赖都有 universal2 wheels。当 arm64 host 上现成 wheels 多为 arm64-only 时，可能需要 cross-arch 装包或重打。真有 Intel Mac 用户时单独评估
 - **代码签名 + 公证**：内部分发先不做，未来若公开发布再补
-- **DMG / 安装器**：同上
-- **auto-update**：同上
+- **auto-update**：手动重新分发新版本
