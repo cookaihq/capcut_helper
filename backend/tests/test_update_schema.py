@@ -18,7 +18,7 @@ def test_update_info_full_fields():
         latest_version="0.2.0",
         has_update=True,
         release_url="https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0",
-        download_url="https://github.com/cookaihq/capcut_helper/releases/download/v0.2.0/capcut_helper.zip",
+        download_url="https://github.com/cookaihq/capcut_helper/releases/download/v0.2.0/capcut_helper-arm64-v0.2.0.dmg",
         notes="- 新增...",
     )
     assert info.has_update is True
