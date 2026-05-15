@@ -35,7 +35,13 @@
 
 **架构**：arm64-only（M 系列 Mac）。
 
-**分发**：`zip -r capcut_helper.zip capcut_helper.app` 直接发给同事。首次打开因为未签名会弹 Gatekeeper 警告，需右键→打开或系统设置→隐私与安全里允许。README 写清楚。
+**分发**：用 Apple 官方推荐的 `ditto` 打 zip——`.app` 内有大量符号链接（Frameworks、Python 框架等），`zip -r` 不带 `-y` 会跟随符号链接、拷贝目标内容，对方解压后符号链接丢失可能导致 dyld 加载库失败。命令：
+
+```bash
+ditto -c -k --sequesterRsrc --keepParent dist/capcut_helper.app dist/capcut_helper.zip
+```
+
+首次打开因为未签名会弹 Gatekeeper 警告，需右键→打开或系统设置→隐私与安全里允许。首次访问剪映草稿目录（`~/Movies/JianyingPro/...`）时近版 macOS 会再弹一个文件夹访问权限提示，点允许即可。README 写清楚这两个提示。
 
 ## 4. Bundle 内容
 
@@ -99,7 +105,7 @@ PyInstaller 加进 `backend/pyproject.toml` 的 `[dependency-groups] dev`（不�
 - `Analysis(['app/main.py'], ...)`
 - `datas` 含 frontend/dist + `collect_data_files('pyJianYingDraft')`
 - `hiddenimports` + `collect_submodules('pywebview')` 或直接 `collect_all('pywebview')`
-- `BUNDLE` 段输出 `.app`，`name='capcut_helper.app'`，`bundle_identifier='com.cookai.capcut_helper'`，`info_plist` 至少含 `CFBundleName='capcut_helper'`、`LSBackgroundOnly=False`
+- `BUNDLE` 段输出 `.app`，`name='capcut_helper.app'`，`bundle_identifier='com.cookaihq.capcut_helper'`（与 git 身份 cookaihq 对齐；未来若启用代码签名不要再随便改这个值，否则身份漂移），`info_plist` 至少含 `CFBundleName='capcut_helper'`
 
 `capcut_helper/.gitignore` 加 `build/` 和 `dist/`（PyInstaller 在项目根产生这俩目录）。
 
@@ -127,7 +133,7 @@ def reveal_in_os(self, path: str) -> None:
 1. 双击 `dist/capcut_helper.app` → 窗口能开（约 900×640）
 2. 三视图（活动 / 草稿 / 设置）能切
 3. 「设置」里「选择目录」能弹出系统文件夹选择对话框
-4. 在另一个终端 `curl http://127.0.0.1:<打印出的端口>/api/v1/health` 确认服务可达且返回 `service: "capcut_helper"`
+4. 在另一个终端 `curl http://127.0.0.1:<GUI 状态栏显示的端口>/api/v1/health` 确认服务可达且返回 `service: "capcut_helper"`（main.py 不再向 stdout 打印端口，.app 启动时 stdout 也不可见，从 GUI 状态栏读最简单）
 5. 用 ai-canvas 或 curl POST 一个真实时间线规格，验证草稿能完整生成（前端构建产物 + pyJianYingDraft 资源 + libmediainfo 都被打进去了的端到端确认）
 
 **跨机器验证**（剥离开发机环境依赖）：
