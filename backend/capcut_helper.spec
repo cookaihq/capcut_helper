@@ -10,7 +10,14 @@
 前置：frontend/dist 必须先用 `npm run build` 构建好（build_mac.sh 已包含）。
 """
 
+import re
+from pathlib import Path
+
 from PyInstaller.utils.hooks import collect_all, collect_data_files
+
+# 单一版本号来源：app/__init__.py::__version__
+_init_text = (Path(SPECPATH) / "app" / "__init__.py").read_text(encoding="utf-8")
+VERSION = re.search(r'__version__\s*=\s*"([^"]+)"', _init_text).group(1)
 
 # pywebview Mac 后端 hidden imports + 数据文件一次性收齐
 pywebview_datas, pywebview_binaries, pywebview_hiddenimports = collect_all("webview")
@@ -68,14 +75,14 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="capcut_helper.app",
-    icon=None,
+    icon="assets/icon.icns",
     bundle_identifier="com.cookaihq.capcut_helper",
     info_plist={
         "CFBundleName": "capcut_helper",
         "CFBundleDisplayName": "capcut_helper",
         "CFBundleIdentifier": "com.cookaihq.capcut_helper",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": VERSION,
+        "CFBundleShortVersionString": VERSION,
         "NSHighResolutionCapable": True,
     },
 )

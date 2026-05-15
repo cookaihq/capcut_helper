@@ -1,3 +1,5 @@
+import app.core.locale_fix  # noqa: F401 — 必须最先，固定 UTF-8 locale 给 libmediainfo
+
 import threading
 import time
 import urllib.request
