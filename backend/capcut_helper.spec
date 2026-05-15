@@ -28,7 +28,7 @@ a = Analysis(
         *pywebview_datas,
         *jianying_datas,
     ],
-    hiddenimports=pywebview_hiddenimports,
+    hiddenimports=pywebview_hiddenimports + ["AppKit"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
