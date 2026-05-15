@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 from typing import Callable, Optional
 
 import AppKit
@@ -20,6 +22,37 @@ from PyObjCTools import AppHelper
 from app import __version__
 
 logger = logging.getLogger(__name__)
+
+
+def _resource_path(rel: str) -> Path:
+    """与 app/server.py::_resource_path 同款约定：
+    - 开发模式：相对 capcut_helper/ 仓库根（_tray_macos.py 在 backend/app/native/，parents[3] = capcut_helper/）
+    - PyInstaller 冻结：相对 sys._MEIPASS
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / rel
+    return Path(__file__).resolve().parents[3] / rel
+
+
+def _load_tray_template_image() -> AppKit.NSImage:
+    """加载状态栏 template 图（1x + @2x），交由 macOS 按主题自动渲染颜色。
+
+    把两份 bitmap rep 都设为 18pt 逻辑尺寸：1x 屏渲染 18px，Retina 屏渲染 36px，
+    系统会按 backing scale 自动挑选锐利的那张。
+    """
+    paths = [
+        _resource_path("backend/assets/tray_icon_template.png"),
+        _resource_path("backend/assets/tray_icon_template@2x.png"),
+    ]
+    image = AppKit.NSImage.alloc().initWithSize_(AppKit.NSMakeSize(18, 18))
+    for p in paths:
+        rep = AppKit.NSBitmapImageRep.imageRepWithContentsOfFile_(str(p))
+        if rep is None:
+            raise RuntimeError(f"无法加载状态栏图标：{p}")
+        rep.setSize_(AppKit.NSMakeSize(18, 18))
+        image.addRepresentation_(rep)
+    image.setTemplate_(True)
+    return image
 
 
 class _MenuTarget(AppKit.NSObject):
@@ -110,8 +143,10 @@ class MacOSTray:
         on_quit: Callable[[], None],
     ) -> None:
         status_bar = AppKit.NSStatusBar.systemStatusBar()
-        self._status_item = status_bar.statusItemWithLength_(AppKit.NSVariableStatusItemLength)
-        self._status_item.button().setTitle_("剪映")   # 占位文字方案；正式图标 follow-up
+        self._status_item = status_bar.statusItemWithLength_(AppKit.NSSquareStatusItemLength)
+        button = self._status_item.button()
+        button.setImage_(_load_tray_template_image())
+        button.setImagePosition_(AppKit.NSImageOnly)
 
         self._menu = self._build_menu_skeleton()
 
@@ -132,7 +167,6 @@ class MacOSTray:
 
         # 不调 setMenu_——那样左右键都弹菜单。
         # 改为给 button 绑 action：左键 → on_open，右键 → 弹菜单（在 _MenuTarget.onStatusBarClick_ 里分发）。
-        button = self._status_item.button()
         button.setTarget_(self._menu_target)
         button.setAction_(b"onStatusBarClick:")
         button.sendActionOn_(

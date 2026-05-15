@@ -32,6 +32,9 @@ a = Analysis(
     datas=[
         # (源路径相对 spec 所在目录, bundle 内目标路径)
         ("../frontend/dist", "frontend/dist"),
+        # 状态栏 template 图：运行时 _tray_macos._resource_path 在 _MEIPASS/backend/assets 找
+        ("assets/tray_icon_template.png", "backend/assets"),
+        ("assets/tray_icon_template@2x.png", "backend/assets"),
         *pywebview_datas,
         *jianying_datas,
     ],
