@@ -1,4 +1,5 @@
 import os
+import plistlib
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +12,26 @@ _DRAFT_ROOT_RELATIVE = {
     "darwin": "Movies/JianyingPro/User Data/Projects/com.lveditor.draft",
     "win32": "AppData/Local/JianyingPro/User Data/Projects/com.lveditor.draft",
 }
+
+# macOS 剪映把用户自定义草稿目录写在这个 plist 的这个字段里（实测剪映 10.5）
+_MACOS_JIANYING_PLIST_RELATIVE = (
+    "Library/Containers/com.lemon.lvpro/Data/Library/Preferences/com.bytedance.JianyingPro.plist"
+)
+_MACOS_CUSTOM_DRAFT_PATH_KEY = "GlobalSettings.History.currentCustomDraftPath"
+
+
+def _read_macos_custom_draft_path() -> Optional[str]:
+    """读剪映 plist 中用户设置的草稿目录；任何异常都返回 None 让上层回退到默认目录。"""
+    plist_path = Path.home() / _MACOS_JIANYING_PLIST_RELATIVE
+    try:
+        with plist_path.open("rb") as f:
+            data = plistlib.load(f)
+    except (FileNotFoundError, PermissionError, plistlib.InvalidFileException, ValueError):
+        return None
+    value = data.get(_MACOS_CUSTOM_DRAFT_PATH_KEY)
+    if not isinstance(value, str) or not value:
+        return None
+    return value if Path(value).is_dir() else None
 
 
 class NativeBridge:
@@ -36,7 +57,12 @@ class NativeBridge:
             subprocess.run(["explorer", "/select,", normalized], check=False)
 
     def detect_draft_root(self) -> Optional[str]:
-        """按平台推断剪映默认草稿目录，存在则返回路径字符串，否则 None。"""
+        """优先读剪映配置里的自定义草稿目录，读不到则回退到平台默认目录。"""
+        if sys.platform == "darwin":
+            custom = _read_macos_custom_draft_path()
+            if custom is not None:
+                return custom
+        # TODO: Windows 端剪映把自定义草稿目录存在哪个文件目前未确认，暂只回退默认路径
         relative = _DRAFT_ROOT_RELATIVE.get(sys.platform)
         if relative is None:
             return None

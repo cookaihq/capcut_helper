@@ -39,7 +39,7 @@ def main() -> None:
 
     bridge = NativeBridge()
     window = webview.create_window(
-        "capcut_helper",
+        "剪映助手",
         f"http://127.0.0.1:{port}/",
         js_api=bridge,
         width=900,
