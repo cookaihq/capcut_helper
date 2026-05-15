@@ -6,6 +6,7 @@ import uvicorn
 import webview
 
 from app.core.config import load_config
+from app.core.logging import setup_logging
 from app.core.port import select_port
 from app.native.bridge import NativeBridge
 from app.server import create_app
@@ -28,6 +29,7 @@ def _wait_for_server(port: int, timeout: float = 10.0) -> bool:
 
 
 def main() -> None:
+    setup_logging()
     cfg = load_config()
     port = select_port(cfg.port_range)
     app = create_app(port)

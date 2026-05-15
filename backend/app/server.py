@@ -9,6 +9,7 @@ from app import __version__
 from app.api.router import api_router
 from app.core.config import load_config
 from app.core.exceptions import register_exception_handlers
+from app.core.request_snapshot import install_request_snapshot
 
 
 def _resource_path(rel: str) -> Path:
@@ -33,6 +34,9 @@ def create_app(port: int) -> FastAPI:
     app.state.last_draft_request_at = None
 
     cfg = load_config()
+    # add_middleware 是 LIFO：越晚 add 越靠外层。
+    # 先 add snapshot 让它在内层 → CORS 拒绝的请求不会被记录
+    install_request_snapshot(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cfg.cors_origins,
