@@ -18,3 +18,12 @@ export async function detectDraftRoot() {
   if (!isBridgeAvailable()) return null
   return window.pywebview.api.detect_draft_root()
 }
+
+export async function openUrl(url) {
+  if (!isBridgeAvailable()) {
+    // 浏览器开发态降级：vite dev server 跑前端时没有 pywebview
+    window.open(url, '_blank')
+    return
+  }
+  await window.pywebview.api.open_url(url)
+}

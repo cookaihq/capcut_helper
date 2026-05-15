@@ -32,4 +32,23 @@ describe('bridge', () => {
     expect(window.pywebview.api.reveal_in_os).toHaveBeenCalledWith('/some/path')
     expect(await detectDraftRoot()).toBe('/detected')
   })
+
+  it('openUrl falls back to window.open without bridge', async () => {
+    const { openUrl } = await import('./bridge.js')
+    const spy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await openUrl('https://x/foo')
+    expect(spy).toHaveBeenCalledWith('https://x/foo', '_blank')
+    spy.mockRestore()
+  })
+
+  it('openUrl delegates to pywebview.api when available', async () => {
+    window.pywebview = {
+      api: {
+        open_url: vi.fn().mockResolvedValue(undefined),
+      },
+    }
+    const { openUrl } = await import('./bridge.js')
+    await openUrl('https://x/bar')
+    expect(window.pywebview.api.open_url).toHaveBeenCalledWith('https://x/bar')
+  })
 })
