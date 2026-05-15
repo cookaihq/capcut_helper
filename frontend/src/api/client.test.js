@@ -37,4 +37,25 @@ describe('client', () => {
       cors_origins: [],
     })
   })
+
+  it('getUpdateInfo unwraps update info', async () => {
+    mockFetch({
+      code: 0,
+      message: 'ok',
+      data: {
+        current_version: '0.1.0',
+        latest_version: '0.2.0',
+        has_update: true,
+        release_url: 'https://x/release',
+        download_url: 'https://x/zip',
+        notes: 'notes',
+        error: null,
+      },
+    })
+    const { getUpdateInfo } = await import('./client.js')
+    const data = await getUpdateInfo()
+    expect(data.has_update).toBe(true)
+    expect(data.latest_version).toBe('0.2.0')
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/update/check', undefined)
+  })
 })

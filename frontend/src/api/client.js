@@ -22,3 +22,4 @@ export const putConfig = (cfg) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cfg),
   })
+export const getUpdateInfo = () => request('/update/check')
