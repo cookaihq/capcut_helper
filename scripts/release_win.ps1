@@ -77,6 +77,9 @@ if ($originUrl -notmatch 'github\.com[:/]([^/]+/[^/.]+?)(\.git)?$') {
 $repoPath = $Matches[1]
 Write-Host "→ 仓库 $repoPath"
 
+# push 认证统一走 .github-token（避免依赖 Git Credential Manager 缓存的账号），与下面 API 调用同源
+$pushUrl = "https://${token}@github.com/${repoPath}.git"
+
 if ($NotesFile -and -not (Test-Path $NotesFile)) {
     throw "release notes 文件不存在: $NotesFile"
 }
@@ -107,7 +110,7 @@ if (-not (Test-Path "dist/$assetName")) {
 # ---------- Git push ----------
 
 Write-Host "→ git push main"
-git push origin main
+git push $pushUrl main
 if ($LASTEXITCODE -ne 0) { throw "git push main 失败" }
 
 Write-Host "→ git tag $tag"
@@ -116,7 +119,7 @@ if ($LASTEXITCODE -ne 0) { throw "git tag 失败" }
 
 if (-not $remoteTagExists) {
     Write-Host "→ git push tag"
-    git push origin $tag
+    git push $pushUrl $tag
     if ($LASTEXITCODE -ne 0) { throw "git push tag 失败" }
 } else {
     Write-Host "→ 跳过 push tag（remote 已有）"

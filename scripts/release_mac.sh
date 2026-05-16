@@ -74,6 +74,9 @@ if [ -z "$REPO_PATH" ] || ! [[ "$REPO_PATH" =~ ^[^/]+/[^/]+$ ]]; then
 fi
 echo "→ 仓库 $REPO_PATH"
 
+# push 认证统一走 .github-token（避免依赖 macOS keychain 缓存的账号），与下面 API 调用同源
+PUSH_URL="https://${TOKEN}@github.com/${REPO_PATH}.git"
+
 if [ -n "$NOTES_FILE" ] && [ ! -f "$NOTES_FILE" ]; then
   echo "✗ release notes 文件不存在: $NOTES_FILE"
   exit 1
@@ -98,12 +101,12 @@ fi
 # ---------- Git 推送 ----------
 
 echo "→ git push main"
-git push origin main
+git push "$PUSH_URL" main
 echo "→ git tag $TAG"
 git tag "$TAG"
 if [ "$REMOTE_TAG_EXISTS" -eq 0 ]; then
   echo "→ git push tag"
-  git push origin "$TAG"
+  git push "$PUSH_URL" "$TAG"
 else
   echo "→ 跳过 push tag（remote 已有）"
 fi
