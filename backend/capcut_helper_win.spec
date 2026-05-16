@@ -22,6 +22,10 @@ a = Analysis(
     binaries=pywebview_binaries,
     datas=[
         ("../frontend/dist", "frontend/dist"),
+        # 托盘图（运行时 _tray_windows._resource_path 从 _MEIPASS/backend/assets/ 加载）
+        # + EXE 嵌入用的 ico（PyInstaller 编译期读取，下面 EXE() 的 icon= 也指它）
+        ("assets/tray_icon.png", "backend/assets"),
+        ("assets/icon.ico", "backend/assets"),
         *pywebview_datas,
         *jianying_datas,
     ],
@@ -53,6 +57,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="assets/icon.ico",
 )
 
 coll = COLLECT(
