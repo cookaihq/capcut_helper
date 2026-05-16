@@ -59,9 +59,10 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   echo "✗ 本地已有 tag $TAG。删除后重跑：git tag -d $TAG"
   exit 1
 fi
+REMOTE_TAG_EXISTS=0
 if git ls-remote --tags origin "refs/tags/$TAG" 2>/dev/null | grep -q "$TAG"; then
-  echo "✗ origin 上已有 tag $TAG（这个版本号已发过）。bump __version__ 后再来"
-  exit 1
+  echo "→ origin 上已有 tag $TAG（可能 Windows 端已发过），跳过 push tag、复用已存在的 release"
+  REMOTE_TAG_EXISTS=1
 fi
 
 # 读 owner/repo（从 origin URL）
@@ -100,13 +101,26 @@ echo "→ git push main"
 git push origin main
 echo "→ git tag $TAG"
 git tag "$TAG"
-echo "→ git push tag"
-git push origin "$TAG"
+if [ "$REMOTE_TAG_EXISTS" -eq 0 ]; then
+  echo "→ git push tag"
+  git push origin "$TAG"
+else
+  echo "→ 跳过 push tag（remote 已有）"
+fi
 
-# ---------- 创建 GitHub release ----------
+# ---------- 找或建 GitHub release ----------
 
-echo "→ 创建 GitHub release"
-RELEASE_PAYLOAD=$(python3 - "$TAG" "$NOTES_FILE" <<'PY'
+echo "→ 查询是否已有 release（可能 Windows 端先发过）"
+EXISTING_RELEASE=$(curl -sf -H "Authorization: Bearer $TOKEN" \
+                            -H "Accept: application/vnd.github+json" \
+                            "https://api.github.com/repos/$REPO_PATH/releases/tags/$TAG" 2>/dev/null) || EXISTING_RELEASE=""
+
+if [ -n "$EXISTING_RELEASE" ]; then
+  echo "→ 复用已存在 release"
+  RELEASE_JSON="$EXISTING_RELEASE"
+else
+  echo "→ 创建 GitHub release"
+  RELEASE_PAYLOAD=$(python3 - "$TAG" "$NOTES_FILE" <<'PY'
 import json, sys
 tag = sys.argv[1]
 notes_file = sys.argv[2]
@@ -124,19 +138,24 @@ print(json.dumps({
 PY
 )
 
-RELEASE_JSON=$(curl -sf -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/vnd.github+json" \
-  -H "Content-Type: application/json" \
-  "https://api.github.com/repos/$REPO_PATH/releases" \
-  -d "$RELEASE_PAYLOAD") || {
-    echo "✗ 创建 release 失败（curl 退出码非零）"
-    echo "  已推送的 tag $TAG 需要手动清理：git push origin :refs/tags/$TAG && git tag -d $TAG"
-    exit 1
-}
+  RELEASE_JSON=$(curl -sf -X POST \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Content-Type: application/json" \
+    "https://api.github.com/repos/$REPO_PATH/releases" \
+    -d "$RELEASE_PAYLOAD") || {
+      echo "✗ 创建 release 失败（curl 退出码非零）"
+      if [ "$REMOTE_TAG_EXISTS" -eq 0 ]; then
+        echo "  已推送的 tag $TAG 需要手动清理：git push origin :refs/tags/$TAG && git tag -d $TAG"
+      else
+        echo "  remote tag $TAG 由其他端推送，请勿删除；仅需 git tag -d $TAG 清本地"
+      fi
+      exit 1
+  }
+fi
 
 UPLOAD_URL=$(python3 - <<PY
-import json, sys
+import json
 data = json.loads('''$RELEASE_JSON''')
 print(data["upload_url"].split("{")[0])
 PY
