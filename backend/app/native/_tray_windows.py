@@ -1,6 +1,6 @@
 """Windows 系统托盘实现。
 
-依赖：pystray>=0.19, pillow>=10.0（pyproject.toml 平台条件依赖，Task 5）。
+依赖：pystray>=0.19, pillow>=10.0（pyproject.toml 平台条件依赖）。
 
 线程模型：
 - webview.start(func=...) 的 func 在子线程执行
@@ -9,27 +9,30 @@
 """
 from __future__ import annotations
 
+import sys
 import threading
+from pathlib import Path
 from typing import Callable, Optional
 
 import pystray
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from app import __version__
 
 
-def _make_placeholder_icon() -> Image.Image:
-    """动态画一个 32x32 的占位图标，不引入二进制资源文件。
-
-    注意：当前白底，Windows 11 深色任务栏下视觉突兀。正式图标需适配透明背景 +
-    浅/深色模式，作为 follow-up。
+def _resource_path(rel: str) -> Path:
+    """与 app/server.py::_resource_path / _tray_macos._resource_path 同款约定：
+    - 开发模式：相对 capcut_helper/ 仓库根（_tray_windows.py 在 backend/app/native/，parents[3] = capcut_helper/）
+    - PyInstaller 冻结：相对 sys._MEIPASS
     """
-    img = Image.new("RGBA", (32, 32), (255, 255, 255, 255))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((2, 2, 30, 30), radius=6, outline=(0, 0, 0, 255), width=2)
-    # 字体回落到默认；中文字符可能渲染为方块，正式图标 follow-up
-    draw.text((9, 5), "剪", fill=(0, 0, 0, 255))
-    return img
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / rel
+    return Path(__file__).resolve().parents[3] / rel
+
+
+def _load_tray_icon() -> Image.Image:
+    """加载托盘图标（gen_icons.py 派生的 64x64 RGBA PNG）。"""
+    return Image.open(_resource_path("backend/assets/tray_icon.png"))
 
 
 class WindowsTray:
@@ -56,7 +59,7 @@ class WindowsTray:
 
         self._icon = pystray.Icon(
             "capcut_helper",
-            icon=_make_placeholder_icon(),
+            icon=_load_tray_icon(),
             title=f"capcut_helper v{__version__}",
             menu=pystray.Menu(
                 pystray.MenuItem(f"v{__version__}", None, enabled=False),
