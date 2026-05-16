@@ -60,25 +60,34 @@ npm run test                   # Vitest
 
 ### 每次发版
 
-```bash
-# 1. bump 版本号
-vi backend/app/__init__.py        # 改 __version__ 为新版本，例如 "0.1.1"
-git commit -am "chore: bump to 0.1.1"
+两端可独立发，谁先发都行；第二个发的会复用同一个 release 只补传自己平台的资产。
 
-# 2. 一条命令发布
-bash scripts/release.sh                   # 不带 release notes
-bash scripts/release.sh notes-0.1.1.md    # 用 markdown 文件作 release body
+```bash
+# 1. bump 版本号（任意一台机器都行）
+vi backend/app/__init__.py        # 改 __version__ 为新版本，例如 "0.1.3"
+git commit -am "chore: bump to 0.1.3"
+git push                          # 让另一台机器能拿到 bump
+
+# 2. 在 Mac 上发 dmg
+bash scripts/release_mac.sh                   # 不带 release notes
+bash scripts/release_mac.sh notes-0.1.3.md    # 用 markdown 文件作 release body
+
+# 3. 在 Windows 上发 exe（在另一台 Win 机器上、先 git pull）
+pwsh -File scripts/release_win.ps1                   # 不带 release notes
+pwsh -File scripts/release_win.ps1 notes-0.1.3.md    # 用 markdown 文件作 release body
 ```
 
-`scripts/release.sh` 会按顺序完成：跑测试 → 构建 .app/.dmg → push main → push tag `v0.1.1` →
-调 GitHub API 创建 release → 上传 `capcut_helper-arm64-v<version>.dmg` 资产。失败时会指出已推 tag 怎么清理。
+`scripts/release_mac.sh` 与 `scripts/release_win.ps1` 行为对称：跑测试 → 构建产物 → push main → push/复用 tag `v0.1.3` → 找或建 GitHub release → 上传自己平台的资产（`.dmg` / `.exe`）。失败时会指出已推 tag 怎么清理。
 
-发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.1」横幅。
+发布后，已装上旧版的同事下次启动 helper 时会自动看到「发现新版本 v0.1.3」横幅。
 
-> **版本号约定**：tag 必须 `v` + SemVer（`update_checker._strip_v_prefix` 按这个格式解析）；
-> dmg 资产名必须是 `capcut_helper-arm64-v<version>.dmg`（`scripts/build_mac.sh` 产物名 + `services/update_checker.py::_asset_name_for_tag()` 按 tag 模板构造该名）。脚本已硬编码这两个约定，按它来就行。
+> **版本号 & 资产名约定**：tag 必须 `v` + SemVer（`update_checker._strip_v_prefix` 按这个格式解析）；资产名硬编码两个：
+> - Mac：`capcut_helper-arm64-v<version>.dmg`（`scripts/build_mac.sh` 产物名 + `update_checker._asset_name_for_tag()` 在 darwin 分支返回）
+> - Windows：`capcut_helper-x64-v<version>.exe`（Inno Setup `OutputBaseFilename` + `_asset_name_for_tag()` 在 win32 分支返回）
 
-## 打包成 .app 分发
+## 打包分发
+
+### Mac
 
 ```bash
 bash scripts/build_mac.sh
@@ -88,6 +97,17 @@ bash scripts/build_mac.sh
 
 - `dist/capcut_helper.app` —— 双击运行
 - `dist/capcut_helper-arm64-v<version>.dmg` —— 分发用，hdiutil 打 UDZO 压缩 dmg
+
+### Windows
+
+```powershell
+pwsh -File scripts/build_win.ps1
+```
+
+产物：
+
+- `dist/capcut_helper/capcut_helper.exe` —— 双击运行（调试 / 不走安装包时用）
+- `dist/capcut_helper-x64-v<version>.exe` —— Inno Setup 安装包，分发给同事
 
 ## 分发给同事
 
@@ -119,7 +139,6 @@ bash scripts/build_mac.sh
 ## 已知限制
 
 - 平台支持：macOS arm64（M 系列 Mac）和 Windows x64。Intel Mac 暂不支持，见 `docs/superpowers/specs/2026-05-15-capcut-helper-packaging-design.md` §9。
-- Windows 端尚未在 Windows 机器上做端到端打包与回归测试；首次实机分发前需补一轮 `scripts/build_win.ps1` 验证 + 手动测试矩阵。
 - 剪映 10.5+ 草稿编辑保存后会加密，capcut_helper 只能**新建**草稿、不能改剪映动过的草稿。详见 spec §2 实测约束。
 - 状态栏 / 托盘图标当前为占位（mac 文字「剪映」、win PIL 动态画的占位图），正式图标 follow-up。
 - 状态栏菜单「检查更新」会先打开面板再触发前端横幅 UI 处理；前端目前在启动时已自动检查，菜单点击不会强制重查（follow-up：前端监听 `capcut-helper:check-update` 自定义事件）。
