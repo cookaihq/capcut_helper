@@ -5,7 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "capcut-helper-backend"
 dynamic = ["version"]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
+# 上限 3.14：pythonnet 3.0.5（被 pywebview Win 后端通过 clr 拉入）尚未支持 Python 3.14 ABI，
+# 在 3.14 上 `import clr` 抛 RuntimeError: Failed to initialize Python.Runtime.dll。
+# 待上游 pythonnet 适配 3.14 后可放开。
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",

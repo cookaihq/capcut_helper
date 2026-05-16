@@ -1,8 +1,16 @@
 import app.core.locale_fix  # noqa: F401 — 必须最先，固定 UTF-8 locale 给 libmediainfo
 
+import os
+import sys
 import threading
 import time
 import urllib.request
+
+# pywebview Windows 后端（webview/platforms/winforms.py）会 `import clr`（pythonnet）。
+# pythonnet 默认走 coreclr 后端要求用户机装 .NET 6+，对普通终端用户太重；改走 netfx
+# 用 Windows 自带的 .NET Framework 4.x，零额外用户依赖。必须在 `import webview` 之前 set。
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONNET_RUNTIME", "netfx")
 
 import uvicorn
 import webview
