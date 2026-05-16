@@ -2,8 +2,8 @@
 # capcut_helper 发版自动化脚本：bump 版本号后，一条命令完成 push → tag → 构建 → 发 GitHub release。
 #
 # 用法（从任意位置）：
-#   bash capcut_helper/scripts/release.sh                 # 不带 release notes
-#   bash capcut_helper/scripts/release.sh notes.md        # 用 notes.md 作 release body
+#   bash capcut_helper/scripts/release_mac.sh                 # 不带 release notes
+#   bash capcut_helper/scripts/release_mac.sh notes.md        # 用 notes.md 作 release body
 #
 # 前置条件：
 #   1. `git remote get-url origin` 指向 GitHub 仓库（HTTPS 远端，无论凭据如何）
