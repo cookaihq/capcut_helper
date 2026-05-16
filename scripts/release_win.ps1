@@ -155,6 +155,8 @@ try {
             Write-Host "✗ 创建 release 失败：$_"
             if (-not $remoteTagExists) {
                 Write-Host "  已推送的 tag $tag 需要手动清理：git push origin :refs/tags/$tag; git tag -d $tag"
+            } else {
+                Write-Host "  remote tag $tag 由其他端推送，请勿删除；仅需 git tag -d $tag 清本地"
             }
             exit 1
         }

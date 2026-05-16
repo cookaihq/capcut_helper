@@ -20,7 +20,7 @@ Source: "..\dist\capcut_helper\*"; DestDir: "{app}"; Flags: ignoreversion recurs
 
 [Icons]
 Name: "{group}\capcut_helper"; Filename: "{app}\capcut_helper.exe"
-Name: "{group}\鍗歌浇 capcut_helper"; Filename: "{uninstallexe}"
+Name: "{group}\卸载 capcut_helper"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\capcut_helper.exe"; Description: "绔嬪嵆鍚姩 capcut_helper"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\capcut_helper.exe"; Description: "立即启动 capcut_helper"; Flags: nowait postinstall skipifsilent
