@@ -56,12 +56,12 @@ DMG_NAME="capcut_helper-arm64-v${VERSION}.dmg"
 echo "→ 准备发 $TAG"
 
 if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "✗ 本地已有 tag $TAG。删除后重跑：git tag -d $TAG"
+  echo "✗ 本地已有 tag ${TAG}。删除后重跑：git tag -d $TAG"
   exit 1
 fi
 REMOTE_TAG_EXISTS=0
 if git ls-remote --tags origin "refs/tags/$TAG" 2>/dev/null | grep -q "$TAG"; then
-  echo "→ origin 上已有 tag $TAG（可能 Windows 端已发过），跳过 push tag、复用已存在的 release"
+  echo "→ origin 上已有 tag ${TAG}（可能 Windows 端已发过），跳过 push tag、复用已存在的 release"
   REMOTE_TAG_EXISTS=1
 fi
 
