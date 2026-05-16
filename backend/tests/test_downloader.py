@@ -101,6 +101,21 @@ async def test_rejects_too_small_response(tmp_path):
 
 
 @respx.mock
+async def test_writes_bytes_verbatim_without_newline_translation(tmp_path):
+    """落盘必须是二进制透传：含 0x0A 的字节序列不能被 Windows 文本模式改写成 0x0D 0x0A。
+    回归用：os.open 漏 O_BINARY 时 mp4 在 Windows 上会被 LF→CRLF 膨胀并损坏。"""
+    # 合法 mp4 magic（ftyp at offset 4）+ 大量 0x0A 字节 + padding，确保过 magic / 大小校验
+    body = b"\x00\x00\x00\x18ftypmp42" + (b"\n" * 1000) + (b"x" * 200)
+    respx.get("https://x/lf.mp4").mock(
+        return_value=httpx.Response(200, content=body, headers={"content-type": "video/mp4"})
+    )
+    mats = [_material("https://x/lf.mp4", filename="lf.mp4")]
+    result = await downloader.download_materials(mats, tmp_path)
+    path = next(iter(result.values()))
+    assert path.read_bytes() == body
+
+
+@respx.mock
 async def test_image_magic_bytes_validated(tmp_path):
     """image 类型校验 jpeg/png/gif/webp。"""
     # 真 PNG header + padding

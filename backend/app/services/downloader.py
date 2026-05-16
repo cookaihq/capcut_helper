@@ -80,14 +80,13 @@ async def _download_one(
                 # 抛 ValueError 走重试逻辑：上游可能瞬时返回错误页，重试一下也许能拿到正确内容
                 raise ValueError(invalid_reason)
 
-            # 用 fsync 强制刷盘：APFS 默认延迟一致，write_bytes 后立即被 libmediainfo
-            # 通过 C 层 open() 读取，可能拿到 metadata 不稳定的状态导致解析失败
-            fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-            try:
-                os.write(fd, body)
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            # 必须显式二进制模式："wb"：Windows 上文本模式会把 0x0A 自动转成 0x0D 0x0A，
+            # 让 mp4 膨胀且损坏。fsync 强制刷盘：write 后立即被 libmediainfo 通过 C 层 open()
+            # 读取，未刷盘可能拿到 metadata 不稳定状态导致解析失败。
+            with open(dest, "wb") as f:
+                f.write(body)
+                f.flush()
+                os.fsync(f.fileno())
             return material.url, dest
         except Exception as exc:  # noqa: BLE001 — 下载失败统一兜底重试
             last_error = exc
