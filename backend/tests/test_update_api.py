@@ -18,23 +18,28 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
-_VALID_RESPONSE = {
-    "tag_name": "v0.2.0",
-    "html_url": "https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0",
-    "body": "notes",
-    "assets": [
-        {
-            "name": "capcut_helper-arm64-v0.2.0.dmg",
-            "browser_download_url": "https://x/asset",
-        }
+@pytest.mark.parametrize(
+    "platform,asset_name",
+    [
+        ("darwin", "capcut_helper-arm64-v0.2.0.dmg"),
+        ("win32", "capcut_helper-x64-v0.2.0.exe"),
     ],
-}
-
-
+)
 @respx.mock
-def test_update_check_returns_envelope(client):
+def test_update_check_returns_envelope(client, monkeypatch, platform, asset_name):
+    monkeypatch.setattr("sys.platform", platform)
     respx.get("https://api.github.com/repos/cookaihq/capcut_helper/releases/latest").mock(
-        return_value=httpx.Response(200, json=_VALID_RESPONSE)
+        return_value=httpx.Response(200, json={
+            "tag_name": "v0.2.0",
+            "html_url": "https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0",
+            "body": "notes",
+            "assets": [
+                {
+                    "name": asset_name,
+                    "browser_download_url": "https://x/asset",
+                }
+            ],
+        })
     )
     resp = client.get("/api/v1/update/check")
     assert resp.status_code == 200
