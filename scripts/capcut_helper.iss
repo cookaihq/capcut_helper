@@ -15,8 +15,6 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 UninstallDisplayIcon={app}\capcut_helper.exe
 SetupIconFile=..\backend\assets\icon.ico
-CloseApplications=yes
-RestartApplications=yes
 
 [Files]
 Source: "..\dist\capcut_helper\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -27,3 +25,16 @@ Name: "{group}\卸载 capcut_helper"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\capcut_helper.exe"; Description: "立即启动 capcut_helper"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// Restart Manager 关不掉 pystray 托盘 / pywebview 进程（无标准顶级窗口），
+// 装包前直接 taskkill 旧实例 + 全部子进程，避免 DeleteFile failed; code 5。
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{cmd}'), '/C taskkill /F /IM capcut_helper.exe /T', '',
+       SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
+  Result := '';
+end;
