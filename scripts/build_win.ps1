@@ -35,7 +35,9 @@ if (-not $iscc) {
 Write-Host "-> 1/3 安装/构建前端"
 Push-Location frontend
 npm install
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "npm install 失败，退出码 $LASTEXITCODE" }
 npm run build
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "npm run build 失败，退出码 $LASTEXITCODE" }
 Pop-Location
 
 Write-Host "-> 2/3 PyInstaller 打包 onedir"
@@ -43,6 +45,7 @@ Push-Location backend
 uv run pyinstaller --clean --noconfirm `
     --distpath=../dist --workpath=../build `
     capcut_helper_win.spec
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "PyInstaller 打包失败，退出码 $LASTEXITCODE" }
 Pop-Location
 
 Write-Host "-> 3/3 Inno Setup 编译安装包"
