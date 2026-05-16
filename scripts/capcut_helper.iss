@@ -15,6 +15,8 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 UninstallDisplayIcon={app}\capcut_helper.exe
 SetupIconFile=..\backend\assets\icon.ico
+CloseApplications=yes
+RestartApplications=yes
 
 [Files]
 Source: "..\dist\capcut_helper\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
