@@ -56,6 +56,7 @@ npm run test                   # Vitest
    - 生成路径：GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
    - Repository access：只勾本仓库
    - Permissions → Repository → Contents：Read and write
+3. **发 Windows 版前**：本机装 [Inno Setup 6](https://jrsoftware.org/isdl.php)（免费），`scripts/build_win.ps1` 自动定位 `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`。如装在非默认位置，设环境变量 `ISCC_PATH` 指向 ISCC.exe。
 
 ### 每次发版
 
@@ -102,12 +103,18 @@ bash scripts/build_mac.sh
 
 ### Windows 分发
 
-把 `dist/capcut_helper-x64-v<version>.zip` 发给对方，请对方按以下步骤：
+把 `dist/capcut_helper-x64-v<version>.exe` 安装包发给对方，请对方按以下步骤：
 
-1. 解压 zip，得到 `capcut_helper/` 目录
-2. 双击 `capcut_helper.exe`，**首次打开**：因为未做 EV 证书签名，Windows SmartScreen 会拦截，点「更多信息」→「仍要运行」
-3. **前置依赖**：WebView2 Runtime。Win11 / 最新 Win10 默认预装；老 Win10 上若启动后窗口空白，从 https://developer.microsoft.com/microsoft-edge/webview2/ 下「Evergreen Standalone Installer」安装一次
-4. 启动后第一次进 GUI，按「设置」标签里的「自动探测」找剪映草稿目录，或手动选择
+1. 双击 `capcut_helper-x64-v<version>.exe`
+2. **首次打开**：因为未做 EV 证书签名，Windows SmartScreen 会拦截，点「更多信息」→「仍要运行」
+3. 安装向导：选位置（默认 `%LOCALAPPDATA%\Programs\capcut_helper`，不需管理员）→ Next → 完成；可勾「立即启动」
+4. 之后从开始菜单找「capcut_helper」启动
+5. **系统运行时依赖**（PyInstaller 已把 Python 3.13 打进 bundle，**不需装 Python**；但下面两个 Windows 系统运行时需要在）：
+   - **WebView2 Runtime**：Win11 / 近一年 Win10 默认预装；若启动后窗口白屏，从 https://developer.microsoft.com/microsoft-edge/webview2/ 下「Evergreen Standalone Installer」装一次
+   - **Visual C++ 2015-2022 Redistributable (x64)**：绝大多数 Windows 机器自带；若启动报「丢失 VCRUNTIME140.dll」，从 https://aka.ms/vs/17/release/vc_redist.x64.exe 下载安装
+6. 启动后第一次进 GUI，按「设置」标签里的「自动探测」找剪映草稿目录，或手动选择
+
+卸载：「设置 → 应用 → capcut_helper → 卸载」，或开始菜单里点「卸载 capcut_helper」。
 
 ## 已知限制
 
