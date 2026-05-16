@@ -11,6 +11,7 @@
 """
 
 import re
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all, collect_data_files
@@ -35,6 +36,9 @@ a = Analysis(
         # 状态栏 template 图：运行时 _tray_macos._resource_path 在 _MEIPASS/backend/assets 找
         ("assets/tray_icon_template.png", "backend/assets"),
         ("assets/tray_icon_template@2x.png", "backend/assets"),
+        # Windows 托盘图（_tray_windows._resource_path 同款查找）+ EXE 图标资源
+        ("assets/tray_icon.png", "backend/assets"),
+        ("assets/icon.ico", "backend/assets"),
         *pywebview_datas,
         *jianying_datas,
     ],
@@ -63,6 +67,7 @@ exe = EXE(
     target_arch=None,         # 跟随当前 host 架构（M 系列 Mac 上为 arm64）
     codesign_identity=None,
     entitlements_file=None,
+    icon="assets/icon.ico" if sys.platform == "win32" else None,
 )
 
 coll = COLLECT(
