@@ -154,12 +154,11 @@ PY
   }
 fi
 
-UPLOAD_URL=$(python3 - <<PY
-import json
-data = json.loads('''$RELEASE_JSON''')
+UPLOAD_URL=$(printf '%s' "$RELEASE_JSON" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
 print(data["upload_url"].split("{")[0])
-PY
-)
+')
 
 if [ -z "$UPLOAD_URL" ]; then
   echo "✗ release 响应里没拿到 upload_url，响应原文："
