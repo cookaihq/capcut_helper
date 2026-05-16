@@ -113,7 +113,7 @@ def test_asset_name_for_tag_on_darwin(monkeypatch):
 
 def test_asset_name_for_tag_on_win32(monkeypatch):
     monkeypatch.setattr(sys, "platform", "win32")
-    assert _asset_name_for_tag("v0.2.0") == "capcut_helper-x64-v0.2.0.zip"
+    assert _asset_name_for_tag("v0.2.0") == "capcut_helper-x64-v0.2.0.exe"
 
 
 def test_asset_name_for_tag_unsupported_platform(monkeypatch):

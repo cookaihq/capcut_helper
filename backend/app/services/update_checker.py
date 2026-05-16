@@ -15,7 +15,7 @@ def _asset_name_for_tag(tag: str) -> str:
     if sys.platform == "darwin":
         return f"capcut_helper-arm64-{tag}.dmg"
     if sys.platform == "win32":
-        return f"capcut_helper-x64-{tag}.zip"
+        return f"capcut_helper-x64-{tag}.exe"
     raise NotImplementedError(f"unsupported platform: {sys.platform}")
 
 
