@@ -357,3 +357,9 @@ pwsh -File scripts/release_win.ps1 notes-0.1.3.md    # 用 markdown 文件作 re
   - follow-up：Inno Setup `[Code]` 段检测 + 引导下载 WebView2 Runtime；`[Files]`+`[Run]` 段把 `vc_redist.x64.exe`（约 25MB）打进安装包静默执行。下次再做
 - **企业内网 GitHub API 访问**：发版脚本依赖 `api.github.com` 可访问。若内网阻断需走代理，留 `HTTPS_PROXY` 环境变量给 Invoke-RestMethod 透传（PowerShell 默认支持）
 - **PowerShell 版本兼容**：`release_win.ps1` 在 PowerShell 5.1（系统自带）和 PowerShell 7+ 都能跑，因为只用了 `Invoke-RestMethod` / 标准 cmdlet / 字符串操作；不依赖 ternary / pipeline chain 等 7+ 语法
+
+## 12. 实现笔记
+
+实施细节、Task 2 D spike 调研结论（INI 而非 JSON、`[General].currentCustomDraftPath` 字段、路径转义还原）、Inno Setup AppId GUID 固化值、偏离 plan 的决策、follow-up 列表，详见执行报告：
+
+[`docs/superpowers/notes/2026-05-16-windows-completion-report.md`](../notes/2026-05-16-windows-completion-report.md)
