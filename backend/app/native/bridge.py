@@ -1,3 +1,4 @@
+import configparser
 import os
 import plistlib
 import subprocess
@@ -34,6 +35,29 @@ def _read_macos_custom_draft_path() -> Optional[str]:
     return value if Path(value).is_dir() else None
 
 
+def _read_windows_custom_draft_path() -> Optional[str]:
+    """读剪映 Win 版 globalSetting 里的 currentCustomDraftPath；任何异常返回 None 让上层回退到默认。
+
+    实测剪映 10.5+：%LOCALAPPDATA%\\JianyingPro\\User Data\\Config\\globalSetting 是 INI 格式，
+    [General] 段下 currentCustomDraftPath= 写入用户在剪映设置里改过的草稿目录。值通常是 \\\\ 转义
+    的 Windows 路径（也可能是正斜杠），读出来后还原一次再判断目录存在性。
+    """
+    localappdata = os.environ.get("LOCALAPPDATA")
+    if not localappdata:
+        return None
+    config_path = Path(localappdata) / "JianyingPro" / "User Data" / "Config" / "globalSetting"
+    parser = configparser.ConfigParser(strict=False, interpolation=None)
+    try:
+        parser.read(config_path, encoding="utf-8")
+    except (OSError, configparser.Error, UnicodeDecodeError):
+        return None
+    raw = parser.get("General", "currentCustomDraftPath", fallback=None)
+    if not isinstance(raw, str) or not raw:
+        return None
+    value = raw.replace("\\\\", "\\")
+    return value if Path(value).is_dir() else None
+
+
 class NativeBridge:
     """pywebview js_api 桥：暴露给前端 window.pywebview.api.* 的系统外壳操作。
     window 在 create_window 之后由 main.py 赋值。"""
@@ -62,7 +86,10 @@ class NativeBridge:
             custom = _read_macos_custom_draft_path()
             if custom is not None:
                 return custom
-        # TODO: Windows 端剪映把自定义草稿目录存在哪个文件目前未确认，暂只回退默认路径
+        elif sys.platform == "win32":
+            custom = _read_windows_custom_draft_path()
+            if custom is not None:
+                return custom
         relative = _DRAFT_ROOT_RELATIVE.get(sys.platform)
         if relative is None:
             return None

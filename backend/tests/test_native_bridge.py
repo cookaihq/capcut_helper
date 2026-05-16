@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from app.native.bridge import (
     _MACOS_CUSTOM_DRAFT_PATH_KEY,
     _MACOS_JIANYING_PLIST_RELATIVE,
@@ -105,6 +107,8 @@ def test_detect_draft_root_windows_path(tmp_path, monkeypatch):
     draft_dir.mkdir(parents=True)
     monkeypatch.setattr(Path, "home", lambda: fake_home)
     monkeypatch.setattr(sys, "platform", "win32")
+    # 隔离真实的 %LOCALAPPDATA%，避免开发机上剪映装好的 globalSetting 干扰默认路径回退测试
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "no_jianying_config"))
 
     bridge = NativeBridge()
     assert bridge.detect_draft_root() == str(draft_dir)
@@ -144,6 +148,57 @@ def test_reveal_in_os_unsupported_platform_does_nothing(monkeypatch):
     with patch.object(subprocess, "run") as mock_run:
         bridge.reveal_in_os("/foo/bar")
     mock_run.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only")
+def test_read_windows_custom_draft_path_happy(monkeypatch, tmp_path):
+    """globalSetting 里有合法 currentCustomDraftPath 且目录存在 → 返回该路径。"""
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    config_dir = tmp_path / "JianyingPro" / "User Data" / "Config"
+    config_dir.mkdir(parents=True)
+    draft_dir = tmp_path / "custom_drafts"
+    draft_dir.mkdir()
+    escaped = str(draft_dir).replace("\\", "\\\\")  # 模拟 JianyingPro 写 INI 时的转义
+    (config_dir / "globalSetting").write_text(
+        f"[General]\ncurrentCustomDraftPath={escaped}\n",
+        encoding="utf-8",
+    )
+
+    from app.native.bridge import _read_windows_custom_draft_path
+    assert _read_windows_custom_draft_path() == str(draft_dir)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only")
+def test_read_windows_custom_draft_path_missing_file(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from app.native.bridge import _read_windows_custom_draft_path
+    assert _read_windows_custom_draft_path() is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only")
+def test_read_windows_custom_draft_path_invalid_ini(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    config_dir = tmp_path / "JianyingPro" / "User Data" / "Config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "globalSetting").write_text(
+        "not a valid ini [[[ malformed", encoding="utf-8"
+    )
+    from app.native.bridge import _read_windows_custom_draft_path
+    assert _read_windows_custom_draft_path() is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only")
+def test_read_windows_custom_draft_path_dir_missing(monkeypatch, tmp_path):
+    """配置里写了路径但该目录已不存在 → 返回 None 让上层回退默认。"""
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    config_dir = tmp_path / "JianyingPro" / "User Data" / "Config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "globalSetting").write_text(
+        "[General]\ncurrentCustomDraftPath=Z:\\\\nonexistent\\\\drafts\n",
+        encoding="utf-8",
+    )
+    from app.native.bridge import _read_windows_custom_draft_path
+    assert _read_windows_custom_draft_path() is None
 
 
 def test_open_url_invokes_webbrowser(monkeypatch):
