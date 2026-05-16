@@ -14,3 +14,5 @@
 
 # scripts/release.sh 用的 GitHub PAT（含发版权限，泄漏即被滥用）
 .github-token
+
+.claude/
