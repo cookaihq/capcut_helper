@@ -42,6 +42,64 @@ def test_health_returns_service_identity(client):
     assert data["service"] == "capcut_helper"
     assert data["port"] == 9527
     assert "version" in data
+    # 不带 Origin（curl 风格）：cors_allowed 为 null，your_origin 为 null
+    assert data["your_origin"] is None
+    assert data["cors_allowed"] is None
+    assert data["hint"] is None
+    assert "access-control-allow-origin" not in {k.lower() for k in resp.headers}
+
+
+def test_health_reflects_origin_in_whitelist(client):
+    # 默认白名单：localhost:3182 / localhost:3183
+    resp = client.get("/api/v1/health", headers={"Origin": "http://localhost:3182"})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["your_origin"] == "http://localhost:3182"
+    assert data["cors_allowed"] is True
+    assert data["hint"] is None
+    # health 对白名单内 origin 反射 ACAO
+    assert resp.headers["access-control-allow-origin"] == "http://localhost:3182"
+
+
+def test_health_reflects_origin_not_in_whitelist(client):
+    """health 对任意 origin 都放行 ACAO，让调用方 JS 能读到 cors_allowed=false 的提示。"""
+    resp = client.get("/api/v1/health", headers={"Origin": "https://example.com"})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["your_origin"] == "https://example.com"
+    assert data["cors_allowed"] is False
+    assert data["hint"] is not None
+    assert "https://example.com" in data["hint"]
+    # 关键：未在白名单的 origin 也能从 health 拿到 ACAO
+    assert resp.headers["access-control-allow-origin"] == "https://example.com"
+    assert resp.headers.get("vary") == "Origin"
+
+
+def test_business_endpoint_does_not_expose_acao_for_off_whitelist_origin(client):
+    """与 health 对比：业务接口对未授权 origin 不发 ACAO（浏览器会拦截 JS 读响应）。"""
+    resp = client.get("/api/v1/config", headers={"Origin": "https://example.com"})
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") is None
+
+
+def test_cors_hot_reload_after_config_change(client):
+    """改完 cors_origins 不重启进程，下一次请求即时生效。"""
+    # 初始：example.com 不在白名单
+    r = client.get("/api/v1/config", headers={"Origin": "https://example.com"})
+    assert r.headers.get("access-control-allow-origin") is None
+
+    # 通过 PUT /config 加白名单
+    cur = client.get("/api/v1/config").json()["data"]
+    cur["cors_origins"] = list(cur["cors_origins"]) + ["https://example.com"]
+    assert client.put("/api/v1/config", json=cur).status_code == 200
+
+    # 下一次请求立即生效
+    r = client.get("/api/v1/config", headers={"Origin": "https://example.com"})
+    assert r.headers["access-control-allow-origin"] == "https://example.com"
+    # health 的 cors_allowed 也同步反映
+    r = client.get("/api/v1/health", headers={"Origin": "https://example.com"})
+    assert r.json()["data"]["cors_allowed"] is True
+    assert r.json()["data"]["hint"] is None
 
 
 def test_get_and_put_config(client, tmp_path):

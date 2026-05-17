@@ -2,12 +2,12 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.router import api_router
 from app.core.config import load_config
+from app.core.cors import HotReloadCORSMiddleware
 from app.core.exceptions import register_exception_handlers
 from app.core.request_snapshot import install_request_snapshot
 
@@ -33,13 +33,15 @@ def create_app(port: int) -> FastAPI:
     app.state.version = __version__
     app.state.last_draft_request_at = None
 
-    cfg = load_config()
     # add_middleware 是 LIFO：越晚 add 越靠外层。
-    # 先 add snapshot 让它在内层 → CORS 拒绝的请求不会被记录
+    # 先 add snapshot 让它在内层 → CORS preflight（OPTIONS）被中间件直接 400
+    # 拒绝时不会进入业务路由，也就不会被 snapshot 记录；简单请求（GET/POST）
+    # 即使 Origin 不在白名单，仍会穿透到业务并被 snapshot 记录，只是响应不带
+    # Access-Control-Allow-Origin，浏览器侧 JS 拿不到响应。
     install_request_snapshot(app)
     app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cfg.cors_origins,
+        HotReloadCORSMiddleware,
+        get_origins=lambda: load_config().cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
