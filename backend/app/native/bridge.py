@@ -4,6 +4,7 @@ import os
 import plistlib
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -117,13 +118,25 @@ class NativeBridge:
         self._url_callback = cb
 
     def on_url_received(self, url: str) -> None:
-        """native 层（mac/Win 各自）拿到外部 URL 时调本方法，转交给注册的 callback。
-        callback 内任何异常都吞掉并 log，避免污染 native event loop。
-        未注册 callback 时 silently no-op（如 pytest 环境）。"""
+        """native 层（mac NSAppleEventManager / Windows main.py sys.argv handler /
+        internal handle-url）拿到外部 URL 时调本方法，转交给注册的 callback。
+
+        线程模型：**始终**派到一个 daemon worker 跑 callback，原因：
+        mac 上 callback 通常调 window.evaluate_js，而 pywebview cocoa 的
+        evaluate_js 是「AppHelper.callAfter(eval) + Semaphore.acquire() 阻塞
+        等结果」——若调用方本身在主线程（NSAppleEventManager 派发到主线程），
+        acquire 自己阻塞主线程，AppHelper 排进 run loop 的 eval 任务永远不
+        会跑 → 死锁，evaluate_js 永远不返回。把 callback 派到 daemon worker
+        避免占用主线程，无论从主线程还是 daemon 线程（internal handle-url）
+        调本函数都安全。
+        """
         if self._url_callback is None:
             logger.warning("收到 URL 但未注册 callback，丢弃：%s", url)
             return
+        threading.Thread(target=self._invoke_callback_safely, args=(url,), daemon=True).start()
+
+    def _invoke_callback_safely(self, url: str) -> None:
         try:
             self._url_callback(url)
-        except Exception:  # noqa: BLE001 — native 回调必须吞异常
+        except Exception:  # noqa: BLE001 — daemon worker 必须吞异常
             logger.exception("URL callback 处理失败：%s", url)
