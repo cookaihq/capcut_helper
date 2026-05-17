@@ -3,13 +3,9 @@ from urllib.parse import quote
 from fastapi import APIRouter, Request, Response
 
 from app.core.config import load_config
+from app.core.url_handler import TRUST_ACTION, URL_SCHEME
 
 router = APIRouter()
-
-# URL Scheme 与 trust 路径——与 native 层 URL handler、Inno Setup [Registry] 段约定一致。
-# 仅在 cors_allowed=False 且 your_origin 存在时输出 trust_url，鼓励调用方用它一键唤起授权流程。
-URL_SCHEME = "capcut-helper"
-_TRUST_PATH = "trust"
 
 
 @router.get("/health")
@@ -44,7 +40,7 @@ async def health(request: Request, response: Response):
                 "请打开剪映助手 → 设置 → CORS 白名单，添加该域名后保存（无需重启）；"
                 "或在调用方页面引导用户点击 trust_url 一键唤起剪映助手授权。"
             )
-            trust_url = f"{URL_SCHEME}://{_TRUST_PATH}?origin={quote(origin, safe='')}"
+            trust_url = f"{URL_SCHEME}://{TRUST_ACTION}?origin={quote(origin, safe='')}"
 
     update_info = request.app.state.update_info
     latest_version = update_info.latest_version if update_info else None

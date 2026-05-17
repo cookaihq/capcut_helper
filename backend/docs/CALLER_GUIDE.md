@@ -367,3 +367,54 @@ while (true) {
 - 端口段 `9527–9536` 全探测不到 → capcut_helper 桌面应用没启动，提示用户启动它
 - `POST /drafts` 后任务一直 `failed` 且 `error` 提到「草稿根目录」→ 用户没在 capcut_helper 里设置剪映草稿目录
 - 跨域被浏览器拦 → 你的页面 origin 不在 CORS 白名单，见 §4；建议**不要等业务接口报 `Failed to fetch` 才反应**，在 §3 端口发现成功后立刻拿 `health.cors_allowed` 主动自检，提前给用户明确指引（见 §5.1）
+
+## 10. 一键授权（URL Scheme）
+
+如果你的页面 origin 不在白名单，引导用户去 capcut_helper 设置面板手动加白名单虽然可行，但路径长、易放弃。本服务为此提供 `capcut-helper://` URL Scheme，用户点一下链接就能唤起 capcut_helper 弹出授权 Modal，确认后白名单立即生效。
+
+### 链接怎么拿
+
+不要自己拼接 URL —— 直接用 `GET /health` 返回的 `trust_url` 字段（已对 origin 做 URL 编码）：
+
+```js
+const { data } = await fetch(`http://localhost:${port}/api/v1/health`).then(r => r.json())
+if (data.cors_allowed === false) {
+  // 给用户一个明确的按钮，不要自动跳转
+  showButton('点击授权剪映助手', () => { location.href = data.trust_url })
+}
+```
+
+或自己用 `data.scheme` 拼（仅在 `trust_url` 不可用时降级使用）：
+
+```js
+const url = `${data.scheme}://trust?origin=${encodeURIComponent(window.location.origin)}`
+```
+
+### 用户体验流程
+
+1. 用户在你的页面点「授权剪映助手」按钮，触发 `location.href = trust_url`
+2. **浏览器弹系统级确认框**「是否打开 capcut_helper？」 — 这是浏览器安全模型，不可绕过；用户必须主动点「允许」才会拉起 helper
+3. capcut_helper 主面板被拉到前台，弹出 Modal「外部网站请求接入剪映助手」，显示请求的 origin + 权限说明
+4. 用户点「允许接入」 → CORS 白名单立即更新（热生效）
+5. 用户回到你的页面点「我已授权，重试」 → `health.cors_allowed` 变 `true`，业务接口可用
+
+### 浏览器兼容性
+
+| 浏览器 | URL Scheme 唤起行为 |
+|--------|---------------------|
+| Chrome / Edge | 弹「是否打开 capcut_helper」确认框；可勾选「记住选择」跳过下次确认 |
+| Safari (mac) | 同上 |
+| Firefox | 同上 |
+| 系统未装 capcut_helper | 浏览器静默忽略点击（用户感知是「按钮没反应」）— 调用方应在按钮旁附「未安装？去下载」入口兜底 |
+
+### 平台差异
+
+- **macOS**：URL Scheme 走 Apple Event（GURL），OS 自动派给已运行的 capcut_helper 实例；helper 没在运行时 OS 会先启动它再派事件，**对调用方完全透明**。
+- **Windows**：URL Scheme 通过注册表 `HKCU\Software\Classes\capcut-helper` 关联 `capcut_helper.exe "%1"`。OS 启动新进程并把 URL 作为命令行参数传入，新进程先 HTTP 探测端口段 `9527–9536` 找已运行实例转发后退出（单实例语义），找不到才正常启动。**调用方完全无感**。
+
+### 安全边界
+
+- `trust_url` 中的 origin 必须形如 `http(s)://host[:port]`，**不接受路径 / 查询 / 通配符 / IPv6**。`POST /api/v1/cors-origins` 接口和 native URL handler 两层都会校验，攻击者塞 `https://example.com/../evil` 之类的脏数据会被拒绝。
+- **绝不静默添加**。capcut_helper 收到 URL 后必须弹 Modal 让用户人工确认；Modal 会高亮显示请求 origin + 权限范围。
+- 已被信任的 origin 再次发起 trust 请求时，Modal 显示「该网站已被允许」单按钮提示，不再次询问决策（避免重复弹窗骚扰）。
+- 调用方**不应在用户没点击的情况下主动 `location.href = trust_url`**——浏览器对未用户激活的 scheme 唤起可能直接拦截，且这种用法对用户来说是「无缘无故弹出系统确认框」，体验很差。
