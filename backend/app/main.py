@@ -100,17 +100,33 @@ def main() -> None:
 
     def on_trust_url_received(url: str) -> None:
         """capcut-helper://trust?origin=... 到达：解析 → 拉出窗口 → 让前端 Modal 弹出。
-        前端 TrustRequestModal 监听 capcut-helper:trust-request 事件。"""
-        try:
-            req = parse_trust_url(url)
-        except URLParseError:
-            logger.warning("收到非法 trust URL，丢弃：%s", url)
-            return
-        callbacks.on_open()
-        detail = json.dumps({"origin": req.origin}, ensure_ascii=False)
-        window.evaluate_js(
-            f"window.dispatchEvent(new CustomEvent('capcut-helper:trust-request', {{detail: {detail}}}))"
-        )
+        前端 TrustRequestModal 监听 capcut-helper:trust-request 事件。
+
+        线程模型：本函数可能从两种线程被调
+        - mac NSAppleEventManager: 主线程（GURL Apple Event 派发已在主线程）
+        - POST /internal/handle-url: uvicorn daemon 线程
+        mac 上 NSWindow / NSApp API 必须主线程操作，跨线程调 window.show /
+        evaluate_js 会让 NSApp crash 整个进程；故 mac 上强制 dispatch 到主线程，
+        callAfter 在主线程→主线程是 no-op，对 NSAppleEventManager 路径无副作用。
+        Windows pywebview 的 winforms 后端跨线程 PostMessage 安全，不需要派发。
+        """
+        def _do_on_main_thread() -> None:
+            try:
+                req = parse_trust_url(url)
+            except URLParseError:
+                logger.warning("收到非法 trust URL，丢弃：%s", url)
+                return
+            callbacks.on_open()
+            detail = json.dumps({"origin": req.origin}, ensure_ascii=False)
+            window.evaluate_js(
+                f"window.dispatchEvent(new CustomEvent('capcut-helper:trust-request', {{detail: {detail}}}))"
+            )
+
+        if sys.platform == "darwin":
+            from PyObjCTools import AppHelper
+            AppHelper.callAfter(_do_on_main_thread)
+        else:
+            _do_on_main_thread()
 
     callbacks = build_tray_callbacks(window, tray, on_check_update=on_check_update_clicked)
     bridge.register_url_handler(on_trust_url_received)
