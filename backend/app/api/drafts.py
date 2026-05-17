@@ -23,7 +23,17 @@ async def create_draft(spec: TimelineSpec, request: Request):
     task = asyncio.create_task(run_draft_task(state.id, spec))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
-    return {"code": 0, "message": "ok", "data": {"task_id": state.id}}
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "task_id": state.id,
+            # 调用方可立即用 EventSource 订阅这个 URL 拿实时进度
+            # （包含每个素材的下载字节进度）；不订阅就用老方式 GET /tasks/{id}
+            # 轮询，subtasks 字段同样有最新状态
+            "stream_url": f"/api/v1/tasks/{state.id}/stream",
+        },
+    }
 
 
 @router.get("/drafts")

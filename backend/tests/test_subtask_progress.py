@@ -144,3 +144,106 @@ def test_task_to_dict_includes_subtasks():
     assert sub["bytes_downloaded"] == 0
     assert sub["total_bytes"] is None
     assert sub["error"] is None
+
+
+# ============ pub/sub + 节流 ============
+
+import asyncio
+import pytest
+
+
+async def _drain(q: asyncio.Queue, timeout: float = 0.05) -> list:
+    """把 queue 里现有事件全拿出来。给一点 timeout 让 put_nowait 有机会落进 queue。"""
+    out = []
+    while True:
+        try:
+            out.append(await asyncio.wait_for(q.get(), timeout=timeout))
+        except asyncio.TimeoutError:
+            return out
+
+
+async def test_subscribe_immediately_pushes_current_state():
+    """订阅时不需要先等事件，立刻收到一条当前快照。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    reg.update(task.id, status="downloading", progress=42)
+    q = reg.subscribe(task.id)
+    evts = await _drain(q)
+    assert len(evts) == 1
+    assert evts[0][0] == "progress"
+    assert evts[0][1]["progress"] == 42
+
+
+async def test_subscribe_on_done_task_also_emits_done_event():
+    """订阅一个已结束的 task：先收 progress 快照，再立刻收 done，让客户端能马上关连接。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    reg.update(task.id, status="done", progress=100, result="/tmp/d")
+    q = reg.subscribe(task.id)
+    evts = await _drain(q)
+    assert [e[0] for e in evts] == ["progress", "done"]
+
+
+async def test_status_change_pushes_immediately_bypassing_throttle():
+    """status 变化必须立即推送，不能被 200ms 节流压住（done/failed 等是 critical 事件）。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    q = reg.subscribe(task.id)
+    await _drain(q)  # 吃掉订阅初始事件
+
+    # 短时间内多次 status 变化都该被推送
+    reg.update(task.id, status="building", progress=10)
+    reg.update(task.id, status="downloading", progress=20)
+    reg.update(task.id, status="done", progress=100)
+    evts = await _drain(q)
+    # 3 次 status 变化 + 1 次 done 终止事件
+    statuses = [e[1]["status"] for e in evts]
+    assert statuses == ["building", "downloading", "done", "done"]
+    assert evts[-1][0] == "done"
+
+
+async def test_bytes_only_updates_are_throttled():
+    """连续 update_subtask（仅 bytes 累积，status 不变）：200ms 内最多 1 次推送。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    reg.init_subtasks(task.id, _mats("https://x/a.mp4"))
+    reg.update(task.id, status="downloading", progress=10)
+    q = reg.subscribe(task.id)
+    await _drain(q)
+
+    # 先发一次 status 变化（pending→downloading），它不被节流
+    reg.update_subtask(task.id, "https://x/a.mp4",
+                       status="downloading", bytes_downloaded=100, total_bytes=10000)
+    # 紧接着多次 bytes 增长 + 同样 status：除第一条外都被节流压住
+    for n in (200, 300, 400, 500):
+        reg.update_subtask(task.id, "https://x/a.mp4",
+                           status="downloading", bytes_downloaded=n, total_bytes=10000)
+    evts = await _drain(q)
+    # 第一条是 status 变化（不节流），后面 4 次 bytes 都被吞
+    assert len(evts) == 1
+
+
+async def test_unsubscribe_releases_listener():
+    """unsubscribe 后 listeners 不再持有 queue 引用；空了的 task 项被清理。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    q = reg.subscribe(task.id)
+    assert reg._listeners[task.id] == [q]
+    reg.unsubscribe(task.id, q)
+    assert task.id not in reg._listeners
+
+
+async def test_multiple_subscribers_all_receive_events():
+    """同一个 task 多个订阅者（不同 SSE 连接）都该收到事件。"""
+    reg = TaskRegistry()
+    task = reg.create("d")
+    q1 = reg.subscribe(task.id)
+    q2 = reg.subscribe(task.id)
+    await _drain(q1)
+    await _drain(q2)
+
+    reg.update(task.id, status="done", progress=100)
+    evts1 = await _drain(q1)
+    evts2 = await _drain(q2)
+    assert [e[0] for e in evts1] == ["progress", "done"]
+    assert [e[0] for e in evts2] == ["progress", "done"]

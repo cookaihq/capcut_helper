@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import time
 import uuid
@@ -47,9 +48,16 @@ def subtask_id_for_url(url: str) -> str:
     return hashlib.sha256(url.encode("utf-8")).hexdigest()[:8]
 
 
+_PUSH_THROTTLE_S = 0.2  # bytes 累积更新最多 200ms 推送一次；status 变化绕过节流
+
+
 class TaskRegistry:
     def __init__(self) -> None:
         self._tasks: dict[str, TaskState] = {}
+        # task_id → 订阅者 queue 列表（一个 SSE 连接一个 queue）
+        self._listeners: dict[str, list[asyncio.Queue]] = {}
+        # task_id → 上次 push 时间戳（monotonic），用于节流
+        self._last_push_at: dict[str, float] = {}
 
     def create(self, draft_name: str) -> TaskState:
         task_id = uuid.uuid4().hex
@@ -64,9 +72,16 @@ class TaskRegistry:
         return list(self._tasks.values())
 
     def update(self, task_id: str, **fields) -> TaskState:
+        """更新 task 顶层字段。status 变化时立即推送（绕过节流），且若新状态
+        是 done/failed 还要推一条 done 事件，告诉 SSE 订阅者可以关闭连接。"""
         state = self._tasks[task_id]
+        prev_status = state.status
         for key, value in fields.items():
             setattr(state, key, value)
+        status_changed = state.status != prev_status
+        self._push(task_id, "progress", force=status_changed)
+        if status_changed and state.status in ("done", "failed"):
+            self._push(task_id, "done", force=True)
         return state
 
     def init_subtasks(self, task_id: str, materials: Iterable) -> list[Subtask]:
@@ -90,7 +105,8 @@ class TaskRegistry:
         error: Optional[str] = None,
     ) -> Optional[Subtask]:
         """downloader 回调入口。按 url 找子任务，更新状态，自动派生 progress
-        并重算父任务的整体 progress。找不到对应子任务返回 None。"""
+        并重算父任务的整体 progress。子任务 status 变化绕过节流立即推送；仅
+        bytes 累积变化走节流（200ms 内最多一次）。找不到子任务返回 None。"""
         state = self._tasks.get(task_id)
         if state is None:
             return None
@@ -98,6 +114,7 @@ class TaskRegistry:
         if sub is None:
             return None
 
+        prev_status = sub.status
         if status is not None:
             sub.status = status
         if bytes_downloaded is not None:
@@ -109,7 +126,62 @@ class TaskRegistry:
 
         sub.progress = _derive_subtask_progress(sub)
         _recompute_task_progress(state)
+        self._push(task_id, "progress", force=(sub.status != prev_status))
         return sub
+
+    # ---------- SSE pub/sub ----------
+
+    def subscribe(self, task_id: str) -> asyncio.Queue:
+        """订阅任务事件流。返回一个 Queue，订阅者 await q.get() 拿 (event, data)。
+
+        订阅时立刻推一次当前完整快照，让客户端不需要先 GET /tasks/{id} 拿初始
+        值——SSE 上来就有数据。task 已是 done/failed 时也推一次 done 事件让
+        订阅者立即知道任务已结束。
+        """
+        q: asyncio.Queue = asyncio.Queue()
+        self._listeners.setdefault(task_id, []).append(q)
+        state = self._tasks.get(task_id)
+        if state is not None:
+            q.put_nowait(("progress", state.to_dict()))
+            if state.status in ("done", "failed"):
+                q.put_nowait(("done", state.to_dict()))
+        return q
+
+    def unsubscribe(self, task_id: str, queue: asyncio.Queue) -> None:
+        """取消订阅。SSE 连接关闭时（client disconnect / task done）必须调用，
+        否则 listeners 列表会泄漏 queue 引用。"""
+        listeners = self._listeners.get(task_id)
+        if not listeners:
+            return
+        try:
+            listeners.remove(queue)
+        except ValueError:
+            pass
+        if not listeners:
+            del self._listeners[task_id]
+            self._last_push_at.pop(task_id, None)
+
+    def _push(self, task_id: str, event: str, *, force: bool = False) -> None:
+        """向所有订阅者推一条事件。非 force 走 200ms 节流，避免 bytes 累积
+        每个 chunk 都触发 SSE 把消息打死。"""
+        listeners = self._listeners.get(task_id)
+        if not listeners:
+            return
+        if not force:
+            now = time.monotonic()
+            last = self._last_push_at.get(task_id, 0.0)
+            if now - last < _PUSH_THROTTLE_S:
+                return
+            self._last_push_at[task_id] = now
+        else:
+            self._last_push_at[task_id] = time.monotonic()
+
+        state = self._tasks.get(task_id)
+        if state is None:
+            return
+        payload = state.to_dict()
+        for q in listeners:
+            q.put_nowait((event, payload))
 
 
 def _derive_subtask_progress(sub: Subtask) -> int:

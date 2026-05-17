@@ -199,8 +199,11 @@ def test_post_drafts_returns_task_id(client, monkeypatch):
 
     resp = client.post("/api/v1/drafts", json=_valid_spec_body())
     assert resp.status_code == 200
-    task_id = resp.json()["data"]["task_id"]
+    body = resp.json()
+    task_id = body["data"]["task_id"]
     assert task_id
+    # 关键：响应里同时给出 stream_url，调用方可立即用 EventSource 订阅
+    assert body["data"]["stream_url"] == f"/api/v1/tasks/{task_id}/stream"
     # 该 task 能被 tasks 端点查到
     assert client.get(f"/api/v1/tasks/{task_id}").status_code == 200
 

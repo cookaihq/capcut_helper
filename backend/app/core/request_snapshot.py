@@ -98,6 +98,13 @@ class RequestSnapshotMiddleware(BaseHTTPMiddleware):
         # 浏览器 CORS preflight，每个跨域业务请求伴随一次，无业务价值，跳过
         if request.method == "OPTIONS":
             return await call_next(request)
+        # SSE 流（路径以 /stream 结尾）必须跳过：BaseHTTPMiddleware 的 dispatch
+        # 在等 call_next 的 StreamingResponse 时会内部 receive() 监听
+        # http.disconnect，但 SSE generator 在 yield 时还需要原始 receive 通道
+        # 处理 http.request，二者冲突会抛 "Unexpected message received: http.request"。
+        # 流式请求本来也没必要快照（响应是无限增量），跳过最干净。
+        if request.url.path.endswith("/stream"):
+            return await call_next(request)
 
         rid = uuid.uuid4().hex[:12]
         ts = time.time()
