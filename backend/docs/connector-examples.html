@@ -344,6 +344,89 @@
     .progress-bar.ok > div { background: var(--ok); }
     .progress-bar.err > div { background: var(--err); }
 
+    /* 步骤 3：4 轨道可视化编辑器 */
+    .track-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .track-row .track-label {
+      width: 80px;
+      font-size: 13px;
+      color: var(--text);
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .track-row .track-label .icon { font-size: 16px; }
+    .track-segments {
+      flex: 1;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      min-height: 30px;
+      flex-wrap: wrap;
+    }
+    .track-seg {
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+      border: 1px solid transparent;
+    }
+    .track-seg[data-type="video"] {
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .track-seg[data-type="image"] {
+      background: color-mix(in srgb, var(--ok) 12%, var(--surface));
+      color: var(--ok);
+      border-color: color-mix(in srgb, var(--ok) 30%, transparent);
+    }
+    .track-seg[data-type="audio"] {
+      background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+      color: var(--warn);
+      border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+    }
+    .track-seg[data-type="text"] {
+      background: color-mix(in srgb, var(--err) 12%, var(--surface));
+      color: var(--err);
+      border-color: color-mix(in srgb, var(--err) 30%, transparent);
+    }
+    .track-empty {
+      font-size: 12px;
+      color: var(--text-faint);
+      font-style: italic;
+    }
+    .track-input {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 4px;
+      margin-bottom: 4px;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .track-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-fade);
+    }
+
     /* 真实演示顶部「4 种连接组件实时状态看板」面板 */
     .live-preview-panel {
       background: var(--surface);
@@ -913,15 +996,50 @@
             <span class="step-num">3</span>
             <h3 class="step-title">准备时间线规格</h3>
           </div>
-          <p class="step-desc">编辑草稿名和时间线 JSON。默认预填一个 10s Big Buck Bunny 视频示例。</p>
+          <p class="step-desc">4 类轨道（视频 / 图片 / 音频 / 文字），每个轨道下面的文本框「一行一个素材」，上方可视化显示对应段。每段默认时长 5 秒，提交时自动拼成完整 spec JSON。</p>
           <div class="step-body">
             <p class="field-label">草稿名（带时间戳防重名）</p>
             <input type="text" id="input-draft-name" />
-            <p class="field-label">时间线规格（JSON）</p>
-            <textarea id="input-spec" spellcheck="false"></textarea>
-            <div class="step-actions">
-              <button class="btn small" onclick="resetSpec()">恢复默认示例</button>
+
+            <p class="field-label" style="margin-top: 12px;">4 类轨道</p>
+
+            <div class="track-row">
+              <span class="track-label"><span class="icon">🎬</span>视频</span>
+              <div class="track-segments" id="segs-video"></div>
             </div>
+            <textarea class="track-input" id="urls-video" spellcheck="false"
+              placeholder="一行一个视频 URL（mp4 / webm），每段默认时长 5 秒"></textarea>
+
+            <div class="track-row">
+              <span class="track-label"><span class="icon">🖼️</span>图片</span>
+              <div class="track-segments" id="segs-image"></div>
+            </div>
+            <textarea class="track-input" id="urls-image" spellcheck="false"
+              placeholder="一行一个图片 URL（jpg / png / gif / webp）"></textarea>
+
+            <div class="track-row">
+              <span class="track-label"><span class="icon">🎵</span>音频</span>
+              <div class="track-segments" id="segs-audio"></div>
+            </div>
+            <textarea class="track-input" id="urls-audio" spellcheck="false"
+              placeholder="一行一个音频 URL（mp3 / wav 等）"></textarea>
+
+            <div class="track-row">
+              <span class="track-label"><span class="icon">💬</span>文字</span>
+              <div class="track-segments" id="segs-text"></div>
+            </div>
+            <textarea class="track-input" id="urls-text" spellcheck="false"
+              placeholder="一行一段文字内容（不是 URL，直接写字幕/标题文本）"></textarea>
+
+            <div class="step-actions" style="margin-top: 12px;">
+              <button class="btn small" onclick="resetSpecInputs()">恢复默认示例</button>
+              <button class="btn small" onclick="clearAllTracks()">全部清空</button>
+            </div>
+
+            <details style="margin-top: 12px;">
+              <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer;">查看编译后的完整 spec JSON（提交时实际发送的内容）</summary>
+              <div class="result-box" id="compiled-spec" style="margin-top: 6px;"></div>
+            </details>
           </div>
         </li>
 
@@ -1423,7 +1541,25 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
 
     const HELPER_PORT_KEY = 'capcut_helper_port'
     const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
-    const SAMPLE_VIDEO_URL = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4'
+
+    // 每段 segment 默认时长（微秒）。提交时每个 URL/文字行 → 一段。
+    const DEFAULT_SEGMENT_DURATION = 5_000_000
+
+    // 4 类轨道的默认示例（音频公共示例 URL 不易找稳定的，留空让用户自己填）
+    const DEFAULT_VIDEO_URLS = [
+      'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
+      'https://test-videos.co.uk/vids/elephantsdream/mp4/h264/360/Elephants_Dream_360_10s_1MB.mp4',
+    ]
+    const DEFAULT_IMAGE_URLS = [
+      'https://picsum.photos/seed/sample-a/1920/1080',
+      'https://picsum.photos/seed/sample-b/1920/1080',
+      'https://picsum.photos/seed/sample-c/1920/1080',
+    ]
+    const DEFAULT_AUDIO_URLS = []  // 留空：公共 mp3/wav demo URL 稳定性差，按需自填
+    const DEFAULT_TEXT_LINES = [
+      '欢迎使用剪映助手',
+      '一行一段字幕文字',
+    ]
 
     const live = {
       port: null,
@@ -1447,24 +1583,111 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       const pad = (n) => String(n).padStart(2, '0')
       return `demo-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
     }
-    function defaultSpec() {
+
+    // ---- 4 轨道可视化编辑器 ----
+
+    function parseLines(text) {
+      return text.split('\n').map(s => s.trim()).filter(Boolean)
+    }
+
+    function filenameFromUrl(url, fallback) {
+      try {
+        const path = new URL(url).pathname
+        const last = path.split('/').filter(Boolean).pop() || ''
+        if (last.includes('.')) return last
+      } catch {}
+      return fallback
+    }
+
+    /**
+     * 把 4 个 textarea 的内容编译成 backend 接受的 timeline spec。
+     * - 视频 / 图片 / 音频：每行一个 URL → 一段 5 秒 segment（在同轨道顺序排列）
+     * - 文字：每行一段文字内容 → 一段 5 秒 text segment
+     * - 视频和图片各占一条 type=video 的 track（剪映允许多视频轨道叠加）
+     * - 整段全空 → 抛错避免空 spec 被 backend 422 拒绝
+     */
+    function buildSpec() {
+      const videoUrls = parseLines(document.getElementById('urls-video').value)
+      const imageUrls = parseLines(document.getElementById('urls-image').value)
+      const audioUrls = parseLines(document.getElementById('urls-audio').value)
+      const textLines = parseLines(document.getElementById('urls-text').value)
+
+      const tracks = []
+
+      const makeMaterialSegments = (urls, type, extName) => urls.map((url, i) => ({
+        material: { url, type, filename: filenameFromUrl(url, `${type}${i + 1}.${extName}`) },
+        timeline: { start: i * DEFAULT_SEGMENT_DURATION, duration: DEFAULT_SEGMENT_DURATION },
+      }))
+
+      if (videoUrls.length) tracks.push({ type: 'video', segments: makeMaterialSegments(videoUrls, 'video', 'mp4') })
+      if (imageUrls.length) tracks.push({ type: 'video', segments: makeMaterialSegments(imageUrls, 'image', 'jpg') })
+      if (audioUrls.length) tracks.push({ type: 'audio', segments: makeMaterialSegments(audioUrls, 'audio', 'mp3') })
+      if (textLines.length) tracks.push({
+        type: 'text',
+        segments: textLines.map((content, i) => ({
+          text: { content, style: {} },
+          timeline: { start: i * DEFAULT_SEGMENT_DURATION, duration: DEFAULT_SEGMENT_DURATION },
+        })),
+      })
+
+      if (tracks.length === 0) {
+        throw new Error('至少需要一条轨道有内容（任一文本框填一行）')
+      }
+
       return {
-        draft_name: defaultDraftName(),
+        draft_name: document.getElementById('input-draft-name').value.trim() || defaultDraftName(),
         canvas: { width: 1920, height: 1080, fps: 30 },
-        tracks: [{
-          type: 'video',
-          segments: [{
-            material: { url: SAMPLE_VIDEO_URL, type: 'video', filename: 'demo.mp4' },
-            timeline: { start: 0, duration: 10_000_000 },
-          }],
-        }],
+        tracks,
       }
     }
-    function resetSpec() {
-      document.getElementById('input-draft-name').value = defaultDraftName()
-      document.getElementById('input-spec').value = JSON.stringify(defaultSpec(), null, 2)
+
+    /** 根据 textarea 内容刷新轨道可视化（每行非空 → 一个 segment 小方块）。 */
+    function renderSegments() {
+      const visualize = (textareaId, segmentsId, type, labelFn) => {
+        const items = parseLines(document.getElementById(textareaId).value)
+        const host = document.getElementById(segmentsId)
+        if (items.length === 0) {
+          host.innerHTML = '<span class="track-empty">未填，这条轨道不会被提交</span>'
+          return
+        }
+        host.innerHTML = items.map((item, i) =>
+          `<span class="track-seg" data-type="${type}" title="${item.replace(/"/g, '&quot;')}">${labelFn(item, i)}</span>`
+        ).join('')
+      }
+      visualize('urls-video', 'segs-video', 'video', (url, i) => filenameFromUrl(url, `video${i + 1}.mp4`))
+      visualize('urls-image', 'segs-image', 'image', (url, i) => filenameFromUrl(url, `image${i + 1}.jpg`))
+      visualize('urls-audio', 'segs-audio', 'audio', (url, i) => filenameFromUrl(url, `audio${i + 1}.mp3`))
+      visualize('urls-text', 'segs-text', 'text', (content, i) =>
+        content.length > 16 ? content.slice(0, 16) + '…' : content)
+      // 同时刷新「编译后 spec」的折叠面板
+      try {
+        document.getElementById('compiled-spec').textContent = JSON.stringify(buildSpec(), null, 2)
+      } catch (e) {
+        document.getElementById('compiled-spec').textContent = '⚠ ' + e.message
+      }
     }
-    resetSpec()
+
+    function resetSpecInputs() {
+      document.getElementById('input-draft-name').value = defaultDraftName()
+      document.getElementById('urls-video').value = DEFAULT_VIDEO_URLS.join('\n')
+      document.getElementById('urls-image').value = DEFAULT_IMAGE_URLS.join('\n')
+      document.getElementById('urls-audio').value = DEFAULT_AUDIO_URLS.join('\n')
+      document.getElementById('urls-text').value = DEFAULT_TEXT_LINES.join('\n')
+      renderSegments()
+    }
+
+    function clearAllTracks() {
+      const ids = ['urls-video', 'urls-image', 'urls-audio', 'urls-text']
+      ids.forEach(id => { document.getElementById(id).value = '' })
+      renderSegments()
+    }
+
+    // 监听 4 个 textarea 实时刷新可视化
+    const TRACK_INPUT_IDS = ['urls-video', 'urls-image', 'urls-audio', 'urls-text']
+    TRACK_INPUT_IDS.forEach(id => {
+      document.getElementById(id).addEventListener('input', renderSegments)
+    })
+    resetSpecInputs()
 
     // ===== 全局：4 组件实时状态看板 =====
     // 任意流程节点（扫描中/离线/已连接/需要授权/运行中/完成/失败）调一次
@@ -1636,12 +1859,9 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
 
     // ===== 步骤 4：提交 =====
     async function runSubmit() {
-      const draftName = document.getElementById('input-draft-name').value.trim()
-      const specText = document.getElementById('input-spec').value
       let spec
-      try { spec = JSON.parse(specText) }
-      catch (e) { showResult('submit-result', '❌ 时间线 JSON 解析失败：' + e.message, 'err'); return }
-      if (draftName) spec.draft_name = draftName
+      try { spec = buildSpec() }
+      catch (e) { showResult('submit-result', '❌ ' + e.message, 'err'); return }
 
       document.getElementById('btn-submit').disabled = true
       setStepStatus('step-submit', 'active')
