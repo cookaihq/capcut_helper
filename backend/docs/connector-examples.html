@@ -344,6 +344,42 @@
     .progress-bar.ok > div { background: var(--ok); }
     .progress-bar.err > div { background: var(--err); }
 
+    /* 真实演示步骤 5 中的 4 种组件并排展示区 */
+    .live-components-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .component-cell {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 110px;
+    }
+    .component-cell.wide { grid-column: span 2; }
+    .component-cell .component-label {
+      font-size: 10px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 500;
+    }
+    .component-cell .component-host {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 720px) {
+      .live-components-grid { grid-template-columns: 1fr; }
+      .component-cell.wide { grid-column: span 1; }
+    }
+
     /* 真实演示步骤 5 中的子任务列表 */
     .subtask-list {
       list-style: none;
@@ -836,13 +872,34 @@
         <li class="live-step" data-status="pending" id="step-stream">
           <div class="step-head">
             <span class="step-num">5</span>
-            <h3 class="step-title">SSE 订阅实时进度</h3>
+            <h3 class="step-title">SSE 订阅实时进度（4 种 UI 同步刷新）</h3>
           </div>
-          <p class="step-desc">用 EventSource 订阅 stream_url，实时收到整体进度 + 每个素材子任务的字节进度。</p>
+          <p class="step-desc">用 EventSource 订阅 stream_url，4 种连接组件接同一份数据实时刷新，看哪种 UI 适合塞进你的应用。</p>
           <div class="step-body">
             <div id="stream-status" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
             <div class="progress-bar" id="stream-progress" hidden><div style="width: 0"></div></div>
-            <p class="field-label" style="margin-top: 12px;" id="subtask-header" hidden>素材下载进度</p>
+
+            <p class="field-label" style="margin-top: 16px;">4 种连接组件实时刷新</p>
+            <div class="live-components-grid">
+              <div class="component-cell">
+                <span class="component-label">极简徽章 / Badge</span>
+                <div class="component-host" id="live-badge"></div>
+              </div>
+              <div class="component-cell">
+                <span class="component-label">内嵌按钮 / Inline</span>
+                <div class="component-host" id="live-inline"></div>
+              </div>
+              <div class="component-cell">
+                <span class="component-label">状态卡片 / Card</span>
+                <div class="component-host" id="live-card"></div>
+              </div>
+              <div class="component-cell">
+                <span class="component-label">完整向导 / Wizard</span>
+                <div class="component-host" id="live-wizard"></div>
+              </div>
+            </div>
+
+            <p class="field-label" style="margin-top: 16px;" id="subtask-header" hidden>素材下载精确字节进度</p>
             <ul class="subtask-list" id="subtask-list"></ul>
             <details style="margin-top: 12px;">
               <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer;">原始 SSE 事件流</summary>
@@ -960,10 +1017,18 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         el.dataset.state = 'err'
         text.textContent = '剪映助手未运行'
       } else if (state.type === 'task') {
-        el.dataset.state = 'running'
         const t = state.task
-        const done = t.subtasks.filter(s => s.status === 'done').length
-        text.textContent = `草稿生成中 ${done}/${t.subtasks.length} · ${t.progress}%`
+        if (t.status === 'done') {
+          el.dataset.state = 'ok'
+          text.textContent = `✓ ${t.draft_name} 已完成`
+        } else if (t.status === 'failed') {
+          el.dataset.state = 'err'
+          text.textContent = `✗ ${t.draft_name} 失败`
+        } else {
+          el.dataset.state = 'running'
+          const done = t.subtasks.filter(s => s.status === 'done').length
+          text.textContent = `草稿生成中 ${done}/${t.subtasks.length} · ${t.progress}%`
+        }
       } else if (state.health.cors_allowed === false) {
         el.dataset.state = 'warn'
         text.textContent = '需要授权'
@@ -1011,14 +1076,28 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       }
       if (state.type === 'task') {
         const t = state.task
+        if (t.status === 'done') {
+          pill.dataset.state = 'ok'; pill.textContent = '已完成'
+          body.innerHTML = `<span class="strong">${t.draft_name}</span> 已生成`
+          if (t.result) {
+            const path = document.createElement('div')
+            path.style.cssText = 'margin-top:6px; font-family: var(--mono); font-size: 11px; color: var(--text-faint); word-break: break-all;'
+            path.textContent = t.result
+            body.appendChild(path)
+          }
+          return
+        }
+        if (t.status === 'failed') {
+          pill.dataset.state = 'err'; pill.textContent = '失败'
+          body.innerHTML = `<span class="strong">${t.draft_name}</span><br>${t.error || ''}`
+          return
+        }
         pill.dataset.state = 'running'; pill.textContent = '生成中'
         body.innerHTML = `<span class="strong">${t.draft_name}</span> · ${t.progress}%`
-        // 总进度条
         const bar = document.createElement('div')
         bar.className = 'task-progress'
         bar.innerHTML = `<div style="width:${t.progress}%"></div>`
         root.insertBefore(bar, actions)
-        // mini 子任务列表（最多 3 个 + 余下统计）
         const ul = document.createElement('ul')
         ul.className = 'mini-subtasks'
         const visible = t.subtasks.slice(0, 3)
@@ -1078,10 +1157,20 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         btn.onclick = opts.retryFn || (() => {})
       } else if (state.type === 'task') {
         const t = state.task
-        btn.dataset.state = 'running'
-        icon.textContent = '⏳'
-        text.textContent = `草稿生成中 ${t.progress}%`
-        fill.style.width = t.progress + '%'
+        if (t.status === 'done') {
+          btn.dataset.state = 'ok'
+          icon.textContent = '✓'
+          text.textContent = `${t.draft_name} 已完成`
+        } else if (t.status === 'failed') {
+          btn.dataset.state = 'err'
+          icon.textContent = '✗'
+          text.textContent = `${t.draft_name} 失败`
+        } else {
+          btn.dataset.state = 'running'
+          icon.textContent = '⏳'
+          text.textContent = `草稿生成中 ${t.progress}%`
+          fill.style.width = t.progress + '%'
+        }
       } else if (state.health.cors_allowed === false) {
         btn.dataset.state = 'warn'
         icon.textContent = '🔓'; text.textContent = '点击授权剪映助手'
@@ -1098,6 +1187,34 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
           btn.appendChild(tag)
         }
       }
+    }
+
+    /**
+     * 把 task 数据驱动到 wizard 组件（用于真实演示步骤 5 同步刷新 4 种 UI）。
+     * 前两步固定为 done（已发现 helper + 已授权），第三步「生成草稿」按 task 状态推进。
+     */
+    function renderWizardForTask(host, task, health) {
+      let taskStatus, meta, extra = ''
+      if (task.status === 'done') {
+        taskStatus = 'done'
+        meta = `<code>${task.draft_name}</code> · 已完成`
+      } else if (task.status === 'failed') {
+        taskStatus = 'failed'
+        meta = `<code>${task.draft_name}</code> · 失败：${task.error || '未知错误'}`
+      } else {
+        taskStatus = 'running'
+        const subDone = task.subtasks.filter(s => s.status === 'done').length
+        meta = `<code>${task.draft_name}</code> · ${task.progress}% · ${subDone}/${task.subtasks.length} 素材完成`
+        extra = `<div class="wizard-progress"><div style="width:${task.progress}%"></div></div>`
+      }
+      renderWizardInto(host, {
+        stepStates: [
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务',
+            meta: `端口 ${health.port} · v${health.version}` },
+          { num: 2, key: 'cors', status: 'done', title: '检查跨域授权', meta: '已授权' },
+          { num: 3, key: 'task', status: taskStatus, title: '生成草稿', meta, extra },
+        ],
+      })
     }
 
     function renderWizardInto(host, { stepStates, actionHTML = '', extraHTML = '' }) {
@@ -1412,7 +1529,7 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       }
     }
 
-    // ===== 步骤 5：SSE 订阅 =====
+    // ===== 步骤 5：SSE 订阅 + 4 种 UI 同步刷新 =====
     function runStream() {
       setStepStatus('step-stream', 'active')
       const statusEl = document.getElementById('stream-status')
@@ -1421,6 +1538,12 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       const subtaskList = document.getElementById('subtask-list')
       const subtaskHeader = document.getElementById('subtask-header')
       const eventsEl = document.getElementById('stream-events')
+
+      // 4 个组件 host：每次 progress 事件都同步刷新
+      const liveBadge = document.getElementById('live-badge')
+      const liveInline = document.getElementById('live-inline')
+      const liveCard = document.getElementById('live-card')
+      const liveWizard = document.getElementById('live-wizard')
 
       progressBar.hidden = false
       progressBar.className = 'progress-bar'
@@ -1444,6 +1567,16 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         }).join('')
       }
 
+      // 把同一个 task 派给 4 种组件刷新；组件内部根据 task.status 选择
+      // 「运行中 / 已完成 / 失败」对应的样式
+      const refreshComponents = (task) => {
+        const state = { type: 'task', task }
+        renderBadgeInto(liveBadge, state, { clickable: false })
+        renderInlineInto(liveInline, state)
+        renderCardInto(liveCard, state)
+        renderWizardForTask(liveWizard, task, live.health)
+      }
+
       const es = new EventSource(url)
       live.eventSource = es
 
@@ -1452,6 +1585,7 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         statusEl.textContent = `status=${task.status} · progress=${task.progress}%`
         progressInner.style.width = `${task.progress}%`
         renderSubtasks(task.subtasks || [])
+        refreshComponents(task)
         eventsEl.textContent += `[progress] ${new Date().toISOString().slice(11, 23)} status=${task.status} progress=${task.progress}\n`
         eventsEl.scrollTop = eventsEl.scrollHeight
       })
@@ -1460,6 +1594,7 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         const task = JSON.parse(e.data)
         es.close()
         live.eventSource = null
+        refreshComponents(task)
         eventsEl.textContent += `[done]     ${new Date().toISOString().slice(11, 23)} status=${task.status}\n`
         if (task.status === 'done') {
           progressBar.className = 'progress-bar ok'
