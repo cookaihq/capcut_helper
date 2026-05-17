@@ -44,4 +44,8 @@ def test_to_dict_includes_new_fields():
     d = st.to_dict()
     assert d["draft_name"] == "草稿A"
     assert "created_at" in d
-    assert set(d.keys()) == {"id", "status", "progress", "result", "error", "draft_name", "created_at"}
+    assert set(d.keys()) == {
+        "id", "status", "progress", "result", "error",
+        "draft_name", "created_at", "subtasks",
+    }
+    assert d["subtasks"] == []

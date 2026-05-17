@@ -40,7 +40,12 @@ async def test_run_draft_task_success_path(tmp_path, monkeypatch):
         draft_service.builder, "create_empty_draft",
         lambda root, spec: ("FAKE_SCRIPT", draft_dir),
     )
-    async def _fake_download(materials, dest):
+    async def _fake_download(materials, dest, progress_callback=None):
+        # 模拟流式回报：每个素材都先 downloading 再 done，验证 subtask 推进路径
+        for m in materials:
+            if progress_callback:
+                progress_callback(m.url, "downloading", 1024, 1024, None)
+                progress_callback(m.url, "done", 1024, 1024, None)
         return {m.url: dest / m.filename for m in materials}
     monkeypatch.setattr(draft_service, "download_materials", _fake_download)
     monkeypatch.setattr(draft_service.builder, "populate_draft", lambda *a, **k: None)

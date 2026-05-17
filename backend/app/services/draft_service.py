@@ -29,8 +29,24 @@ async def run_draft_task(task_id: str, spec: TimelineSpec) -> None:
         )
 
         stage = "download_materials"
-        registry.update(task_id, status="downloading", progress=30)
-        material_paths = await download_materials(spec.material_urls(), draft_dir)
+        materials = spec.material_urls()
+        registry.init_subtasks(task_id, materials)
+        # 进入 downloading 后，update_subtask 内的 _recompute_task_progress
+        # 会按子任务平均推进，把整体 progress 自动维持在 10–90% 区间
+        registry.update(task_id, status="downloading", progress=10)
+
+        def _on_subtask_progress(url, status, bytes_downloaded, total_bytes, error):
+            registry.update_subtask(
+                task_id, url,
+                status=status,
+                bytes_downloaded=bytes_downloaded,
+                total_bytes=total_bytes,
+                error=error,
+            )
+
+        material_paths = await download_materials(
+            materials, draft_dir, progress_callback=_on_subtask_progress,
+        )
 
         stage = "populate_draft"
         registry.update(task_id, status="building", progress=70)

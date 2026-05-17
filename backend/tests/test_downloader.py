@@ -116,6 +116,76 @@ async def test_writes_bytes_verbatim_without_newline_translation(tmp_path):
 
 
 @respx.mock
+async def test_progress_callback_receives_byte_level_updates(tmp_path, mp4_bytes):
+    """downloader 用 httpx.stream 流式下载时，progress_callback 应当被多次调用：
+    至少一次 downloading（初始 0 进度）+ 多次中间 bytes 累积 + 一次 done。"""
+    respx.get("https://x/a.mp4").mock(
+        return_value=httpx.Response(
+            200, content=mp4_bytes,
+            headers={"content-type": "video/mp4", "content-length": str(len(mp4_bytes))},
+        )
+    )
+
+    events: list[tuple] = []
+    def cb(url, status, downloaded, total, err):
+        events.append((status, downloaded, total))
+
+    await downloader.download_materials(
+        [_material("https://x/a.mp4", filename="a.mp4")],
+        tmp_path,
+        progress_callback=cb,
+    )
+
+    # 第一条必须是 downloading 0；最后一条必须是 done；中间至少有 bytes 推进
+    assert events[0][0] == "downloading" and events[0][1] == 0
+    assert events[-1][0] == "done"
+    assert events[-1][1] == len(mp4_bytes)
+    # 所有事件的 total 一致（来自 Content-Length）
+    assert all(e[2] == len(mp4_bytes) for e in events)
+
+
+@respx.mock
+async def test_progress_callback_reports_failed_on_persistent_error(tmp_path):
+    """所有重试用尽后，progress_callback 应收到 status=failed + error 信息。"""
+    respx.get("https://x/bad.mp4").mock(return_value=httpx.Response(500))
+
+    events: list[tuple] = []
+    def cb(url, status, downloaded, total, err):
+        events.append((status, err))
+
+    with pytest.raises(MaterialDownloadError):
+        await downloader.download_materials(
+            [_material("https://x/bad.mp4", filename="bad.mp4")],
+            tmp_path, retries=2, progress_callback=cb,
+        )
+
+    # 至少有一个 failed 事件
+    failed_events = [e for e in events if e[0] == "failed"]
+    assert len(failed_events) == 1
+    assert failed_events[0][1]  # error 字段非空
+
+
+@respx.mock
+async def test_skipping_redownload_still_reports_done(tmp_path, mp4_bytes):
+    """文件已存在时跳过实际下载，但 progress_callback 仍要报 done，
+    否则 task registry 里这个子任务永远停留在 pending，整体 progress 算不对。"""
+    respx.get("https://x/a.mp4").mock(
+        return_value=httpx.Response(200, content=mp4_bytes, headers={"content-type": "video/mp4"})
+    )
+    mats = [_material("https://x/a.mp4", filename="a.mp4")]
+    await downloader.download_materials(mats, tmp_path)  # 第一次正常下载
+
+    events: list[tuple] = []
+    def cb(url, status, downloaded, total, err):
+        events.append((status, downloaded))
+
+    await downloader.download_materials(mats, tmp_path, progress_callback=cb)  # 第二次跳过下载
+
+    assert len(events) == 1
+    assert events[0] == ("done", len(mp4_bytes))
+
+
+@respx.mock
 async def test_image_magic_bytes_validated(tmp_path):
     """image 类型校验 jpeg/png/gif/webp。"""
     # 真 PNG header + padding
