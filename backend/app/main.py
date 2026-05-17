@@ -47,6 +47,24 @@ def _wait_for_server(port: int, timeout: float = 10.0) -> bool:
 def main() -> None:
     setup_logging()
     cfg = load_config()
+
+    # Windows URL Scheme 入口：OS 唤起 capcut-helper://... 时会启动新 .exe
+    # 进程并把 URL 作 sys.argv[1] 传入。先探测已运行实例，能转发就转发并退出；
+    # 否则继续本进程正常启动，启动完后自己派 URL 到前端。
+    initial_url: str | None = None
+    if sys.platform == "win32":
+        from app.native._url_scheme_windows import (
+            detect_url_arg,
+            try_forward_to_existing,
+        )
+        url_arg = detect_url_arg(sys.argv)
+        if url_arg is not None:
+            if try_forward_to_existing(url_arg, cfg.port_range):
+                # 已运行实例接收了 URL，本进程使命达成
+                return
+            # 没找到已运行实例：留到 _post_start 派发给本进程的前端
+            initial_url = url_arg
+
     port = select_port(cfg.port_range)
     app = create_app(port)
 
@@ -99,13 +117,17 @@ def main() -> None:
     window.events.closing += callbacks.on_closing
 
     def _post_start() -> None:
-        """webview 主循环就绪后跑的副作用：装托盘、注册 URL Scheme。
+        """webview 主循环就绪后跑的副作用：装托盘、注册 URL Scheme、派初启 URL。
         必须等主循环起来才能调，否则 macOS NSAppleEventManager 拿不到 shared
         instance / pystray 也不能创建图标。"""
         tray.install(window, callbacks.on_open, callbacks.on_check_update, callbacks.on_quit)
         if sys.platform == "darwin":
             from app.native._url_scheme_macos import install_url_scheme_handler
             install_url_scheme_handler(bridge.on_url_received)
+        # Windows 首启 + sys.argv 带 URL：本进程接到 URL 但还没启动过实例，
+        # 启动完成后自己派给前端 Modal（同一进程内派发，不需要 HTTP 转发）
+        if initial_url is not None:
+            bridge.on_url_received(initial_url)
 
     webview.start(func=_post_start)
 
