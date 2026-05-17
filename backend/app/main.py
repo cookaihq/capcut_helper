@@ -1,5 +1,7 @@
 import app.core.locale_fix  # noqa: F401 — 必须最先，固定 UTF-8 locale 给 libmediainfo
 
+import json
+import logging
 import os
 import sys
 import threading
@@ -18,9 +20,12 @@ import webview
 from app.core.config import load_config
 from app.core.logging import setup_logging
 from app.core.port import select_port
+from app.core.url_handler import URLParseError, parse_trust_url
 from app.native.bridge import NativeBridge
 from app.native.tray import build_tray_callbacks, create_tray_platform
 from app.server import create_app
+
+logger = logging.getLogger(__name__)
 
 
 def _run_server(app, port: int) -> None:
@@ -51,6 +56,9 @@ def main() -> None:
         raise RuntimeError(f"本地服务在端口 {port} 启动超时")
 
     bridge = NativeBridge()
+    # 让 /api/v1/internal/handle-url 能触达 bridge（Windows 单例转发用）
+    app.state.bridge = bridge
+
     window = webview.create_window(
         "剪映助手",
         f"http://127.0.0.1:{port}/",
@@ -72,7 +80,22 @@ def main() -> None:
             "window.dispatchEvent(new CustomEvent('capcut-helper:check-update'))"
         )
 
+    def on_trust_url_received(url: str) -> None:
+        """capcut-helper://trust?origin=... 到达：解析 → 拉出窗口 → 让前端 Modal 弹出。
+        前端 TrustRequestModal 监听 capcut-helper:trust-request 事件。"""
+        try:
+            req = parse_trust_url(url)
+        except URLParseError:
+            logger.warning("收到非法 trust URL，丢弃：%s", url)
+            return
+        callbacks.on_open()
+        detail = json.dumps({"origin": req.origin}, ensure_ascii=False)
+        window.evaluate_js(
+            f"window.dispatchEvent(new CustomEvent('capcut-helper:trust-request', {{detail: {detail}}}))"
+        )
+
     callbacks = build_tray_callbacks(window, tray, on_check_update=on_check_update_clicked)
+    bridge.register_url_handler(on_trust_url_received)
     window.events.closing += callbacks.on_closing
 
     webview.start(

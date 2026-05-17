@@ -1,12 +1,15 @@
 import configparser
+import logging
 import os
 import plistlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import webview
+
+logger = logging.getLogger(__name__)
 
 # 各平台剪映默认草稿目录（相对 Path.home()）
 _DRAFT_ROOT_RELATIVE = {
@@ -60,10 +63,17 @@ def _read_windows_custom_draft_path() -> Optional[str]:
 
 class NativeBridge:
     """pywebview js_api 桥：暴露给前端 window.pywebview.api.* 的系统外壳操作。
-    window 在 create_window 之后由 main.py 赋值。"""
+    window 在 create_window 之后由 main.py 赋值。
+
+    URL Scheme 入口：native 层（mac NSAppleEventManager / Windows main.py
+    sys.argv handler / internal handle-url API）拿到外部 URL 后调
+    on_url_received，本桥转交给注册的 callback（通常是 main.py 里「拉出窗口
+    + dispatch 前端事件」逻辑）。callback 通过 register_url_handler 注入。
+    """
 
     def __init__(self) -> None:
         self.window = None
+        self._url_callback: Optional[Callable[[str], None]] = None
 
     def pick_folder(self) -> Optional[str]:
         """打开文件夹选择对话框，返回选中目录路径；用户取消返回 None。"""
@@ -100,3 +110,20 @@ class NativeBridge:
         """用系统默认浏览器打开 URL（跳出 pywebview 窗口）。"""
         import webbrowser
         webbrowser.open(url)
+
+    def register_url_handler(self, cb: Callable[[str], None]) -> None:
+        """注册 native URL 到达时的回调。main.py 在 bridge 创建后调用一次。
+        重复注册以最后一次为准（一般不会发生）。"""
+        self._url_callback = cb
+
+    def on_url_received(self, url: str) -> None:
+        """native 层（mac/Win 各自）拿到外部 URL 时调本方法，转交给注册的 callback。
+        callback 内任何异常都吞掉并 log，避免污染 native event loop。
+        未注册 callback 时 silently no-op（如 pytest 环境）。"""
+        if self._url_callback is None:
+            logger.warning("收到 URL 但未注册 callback，丢弃：%s", url)
+            return
+        try:
+            self._url_callback(url)
+        except Exception:  # noqa: BLE001 — native 回调必须吞异常
+            logger.exception("URL callback 处理失败：%s", url)
