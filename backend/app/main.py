@@ -98,11 +98,16 @@ def main() -> None:
     bridge.register_url_handler(on_trust_url_received)
     window.events.closing += callbacks.on_closing
 
-    webview.start(
-        func=lambda: tray.install(
-            window, callbacks.on_open, callbacks.on_check_update, callbacks.on_quit
-        ),
-    )
+    def _post_start() -> None:
+        """webview 主循环就绪后跑的副作用：装托盘、注册 URL Scheme。
+        必须等主循环起来才能调，否则 macOS NSAppleEventManager 拿不到 shared
+        instance / pystray 也不能创建图标。"""
+        tray.install(window, callbacks.on_open, callbacks.on_check_update, callbacks.on_quit)
+        if sys.platform == "darwin":
+            from app.native._url_scheme_macos import install_url_scheme_handler
+            install_url_scheme_handler(bridge.on_url_received)
+
+    webview.start(func=_post_start)
 
 
 if __name__ == "__main__":

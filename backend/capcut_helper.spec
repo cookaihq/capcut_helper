@@ -92,5 +92,15 @@ app = BUNDLE(
         "CFBundleVersion": VERSION,
         "CFBundleShortVersionString": VERSION,
         "NSHighResolutionCapable": True,
+        # 注册 capcut-helper:// URL Scheme，让外部链接（如调用方网页里的
+        # <a href="capcut-helper://trust?origin=...">) 能唤起本 app 并派发
+        # Apple Event 给 _url_scheme_macos._URLHandler 处理。
+        "CFBundleURLTypes": [
+            {
+                "CFBundleURLName": "com.cookaihq.capcut_helper.trust",
+                "CFBundleURLSchemes": ["capcut-helper"],
+                "CFBundleTypeRole": "Viewer",
+            },
+        ],
     },
 )
