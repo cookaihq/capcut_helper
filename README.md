@@ -2,6 +2,8 @@
 
 剪映外挂助手。本地 FastAPI 服务 + pywebview 桌面 GUI，支持把外部程序（如 ai-canvas）传来的时间线规格生成成剪映草稿。
 
+![剪映助手主界面](docs/screenshot-main.png)
+
 详细设计：`docs/superpowers/specs/`。
 
 ## 仓库结构
