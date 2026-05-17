@@ -66,7 +66,7 @@ function range(a, b) { return Array.from({ length: b - a + 1 }, (_, i) => a + i)
 如果你的页面跑在别的 origin（比如部署后的域名），有两种方式让用户授权：
 
 1. **推荐**：调用 `GET /health` 先自检 → 检测到 `cors_allowed: false` 时弹一个指引，让用户在 capcut_helper 桌面应用「设置 → CORS 白名单」里手动添加。
-2. 通过 `PUT /api/v1/config` 直接写入（见 §5.5）——但这要求该写入请求本身的 origin 已在白名单里，鸡生蛋问题，所以**通常只在已授权的 origin 上做白名单的二次管理**。
+2. 通过 `PUT /api/v1/config` 直接写入（见 §5.6）——但这要求该写入请求本身的 origin 已在白名单里，鸡生蛋问题，所以**通常只在已授权的 origin 上做白名单的二次管理**。
 
 未来版本会提供一键唤起 capcut_helper 完成白名单添加的入口（URL Scheme），届时本文档会更新。
 
@@ -187,10 +187,18 @@ if (data.cors_allowed === false) {
 成功响应 `data`：
 
 ```json
-{ "task_id": "3f2a9c1b8e7d4f60a1b2c3d4e5f6a7b8" }
+{
+  "task_id": "3f2a9c1b8e7d4f60a1b2c3d4e5f6a7b8",
+  "stream_url": "/api/v1/tasks/3f2a9c1b8e7d4f60a1b2c3d4e5f6a7b8/stream"
+}
 ```
 
-拿到 `task_id` 后去轮询 §5.3。
+字段说明：
+
+| 字段 | 含义 |
+|------|------|
+| `task_id` | 草稿任务 id，后续查进度 / 取消都用它 |
+| `stream_url` | SSE 推送端点（详见 §5.4）。**推荐**用 `EventSource` 订阅它实时拿进度（含每个素材的下载字节进度），不用每秒轮询 §5.3 |
 
 校验失败返回 HTTP 422，`code` 为 `422`，`data` 是字段级错误详情。
 
@@ -200,44 +208,117 @@ curl -X POST http://localhost:9527/api/v1/drafts \
   -d '{ "draft_name": "demo", "canvas": {"width":1920,"height":1080,"fps":30}, "tracks": [...] }'
 ```
 
-### 5.3 `GET /tasks/{task_id}` — 查任务进度
+### 5.3 `GET /tasks/{task_id}` — 查任务进度（轮询方式）
 
 响应 `data`：
 
 ```json
 {
   "id": "3f2a9c1b8e7d4f60a1b2c3d4e5f6a7b8",
+  "draft_name": "我的视频",
+  "created_at": 1715760000.0,
   "status": "downloading",
-  "progress": 30,
+  "progress": 47,
   "result": null,
-  "error": null
+  "error": null,
+  "subtasks": [
+    {
+      "id": "a3f2c9b1",
+      "name": "clip1.mp4",
+      "url": "https://example.com/clip1.mp4",
+      "status": "done",
+      "progress": 100,
+      "bytes_downloaded": 1234567,
+      "total_bytes": 1234567,
+      "error": null
+    },
+    {
+      "id": "b8e7d4f6",
+      "name": "clip2.mp4",
+      "url": "https://example.com/clip2.mp4",
+      "status": "downloading",
+      "progress": 67,
+      "bytes_downloaded": 800000,
+      "total_bytes": 1200000,
+      "error": null
+    }
+  ]
 }
 ```
 
 > 注意字段名：`POST /drafts` 返回的是 `data.task_id`，而这里任务对象里的字段叫 `data.id`——两者是同一个值。
 
-`status` 取值与进度：
+`status` 取值：
 
-| status | progress | 含义 |
-|--------|----------|------|
-| `pending` | 0 | 任务已创建，还没开始 |
-| `building` | 10 | 正在建空草稿文件夹 |
-| `downloading` | 30 | 正在并发下载素材 |
-| `building` | 70 | 正在写轨道和片段 |
-| `done` | 100 | 完成，`result` 是草稿文件夹的绝对路径 |
-| `failed` | — | 失败，`error` 是错误描述（会指出是哪个素材/哪一步出的问题） |
+| status | 含义 | 整体 `progress` 区间 |
+|--------|------|-------------------|
+| `pending` | 任务已创建，还没开始 | 0 |
+| `building` | 正在建空草稿文件夹 / 正在写轨道和片段 | 10 / 90 |
+| `downloading` | 正在并发下载素材 | 10–90（按 subtasks 平均推进） |
+| `done` | 完成，`result` 是草稿文件夹的绝对路径 | 100 |
+| `failed` | 失败，`error` 是错误描述（会指出是哪个素材/哪一步出的问题） | — |
 
-轮询到 `done` 或 `failed` 就停止。建议轮询间隔 1–2 秒。
+**`subtasks` 字段**：spec 里去重后的每个素材一个子任务，独立汇报下载状态。子任务 `status` 取值 `pending / downloading / done / failed`；`progress` 按字节比例（或无 Content-Length 时按下载量估算）；`bytes_downloaded` 和 `total_bytes` 给 UI 显示精确字节进度。整体任务的 `progress` 在 downloading 阶段自动按 subtasks 平均推进（区间 10–90）。
+
+**首选 SSE，不要轮询**：建议改用 §5.4 的 SSE 接口接收实时推送，子任务字节级进度也能毫秒级感知。仍然轮询是可以的（subtasks 字段同样会返回），但建议间隔 ≥ 1.5s 避免过于频繁。
 
 未知 `task_id` 返回 HTTP 404，`code` 为 `1003`。
 
-### 5.4 `GET /drafts` — 列出已建的草稿
+### 5.4 `GET /tasks/{task_id}/stream` — 任务进度实时推送（SSE）
+
+服务器主动推送任务每次状态变化（含每个素材子任务的下载字节进度），客户端用浏览器原生 `EventSource` 监听即可。比轮询更省请求、延迟更低、字节级进度可视。
+
+**响应**：
+
+- `Content-Type: text/event-stream`
+- 每条事件格式：`event: <name>\ndata: <json>\n\n`
+- event 取值：
+  - `progress`：task 状态 / 子任务状态 / 字节进度变化时推送；`data` 是与 §5.3 完全相同的任务对象
+  - `done`：task 进入 `done` 或 `failed` 状态后服务端推一条 done 然后**主动关闭连接**——这是流的终止信号
+- 空闲超过 15s 服务端发一行注释（`: ping\n\n`）保活，客户端可忽略
+- **节流**：纯字节累积的更新最多 200ms 推一次；status 变化（含 done/failed）立即推送不被节流
+
+**客户端示例**：
+
+```js
+const es = new EventSource(`http://localhost:${port}/api/v1/tasks/${taskId}/stream`)
+
+es.addEventListener('progress', (e) => {
+  const task = JSON.parse(e.data)
+  updateProgressUI(task.status, task.progress)
+  // 渲染每个素材的下载进度条
+  for (const sub of task.subtasks) {
+    updateSubtaskBar(sub.id, sub.name, sub.status, sub.progress,
+                     sub.bytes_downloaded, sub.total_bytes)
+  }
+})
+
+es.addEventListener('done', (e) => {
+  const task = JSON.parse(e.data)
+  es.close()
+  if (task.status === 'done') {
+    console.log('草稿生成完成:', task.result)
+  } else {
+    console.error('生成失败:', task.error)
+  }
+})
+
+es.onerror = (e) => {
+  // 连接断了：EventSource 会自动重连，不需要手动处理；如要彻底放弃用 es.close()
+}
+```
+
+**订阅时的初始状态**：订阅成功后服务端**立刻推一次** `progress` 事件携带当前任务完整快照，所以客户端不需要先 GET `/tasks/{id}` 拿初始值。订阅一个已经 `done` 的任务也会先收 `progress`（含 result）再收 `done` 立刻关连接。
+
+未知 `task_id` 返回 HTTP 404，`code` 为 `1003`。
+
+### 5.5 `GET /drafts` — 列出已建的草稿
 
 返回剪映草稿根目录下的草稿文件夹名列表。草稿根目录未配置或不存在时返回空数组。
 
 响应 `data`：`["我的视频", "另一个草稿", ...]`
 
-### 5.5 `GET /config` / `PUT /config` — 读写配置
+### 5.6 `GET /config` / `PUT /config` — 读写配置
 
 `GET /config` 响应 `data`：
 
@@ -314,7 +395,7 @@ curl -X POST http://localhost:9527/api/v1/drafts \
 
 > 1001/1002/1004 这类业务错误，多数情况下不是 `POST /drafts` 直接返回的——`POST /drafts` 几乎总是先返回 `task_id`，真正的失败体现在轮询 `GET /tasks/{id}` 时 `status` 变成 `failed`、`error` 字段有描述。
 
-## 8. 完整调用流程示例（JavaScript）
+## 8. 完整调用流程示例（JavaScript，SSE 版）
 
 ```js
 // 1. 发现端口
@@ -342,25 +423,35 @@ const postResp = await fetch(`${base}/drafts`, {
 })
 const postBody = await postResp.json()
 if (postBody.code !== 0) throw new Error(postBody.message)
-const taskId = postBody.data.task_id
+const { task_id, stream_url } = postBody.data
 
-// 3. 轮询任务直到 done / failed
-while (true) {
-  await new Promise(r => setTimeout(r, 1500))
-  const taskResp = await fetch(`${base}/tasks/${taskId}`)
-  const { data } = await taskResp.json()
-  // data: { id, status, progress, result, error }
-  updateProgressUI(data.status, data.progress)
-  if (data.status === 'done') {
-    console.log('草稿已生成:', data.result)   // 草稿文件夹绝对路径
-    break
-  }
-  if (data.status === 'failed') {
-    throw new Error('生成失败: ' + data.error)
-  }
-}
+// 3. SSE 订阅实时进度（含每个素材的字节进度），用 Promise 包一层
+//    方便上层用 await 拿最终结果
+const result = await new Promise((resolve, reject) => {
+  const es = new EventSource(`http://localhost:${port}${stream_url}`)
+  es.addEventListener('progress', (e) => {
+    const task = JSON.parse(e.data)
+    updateProgressUI(task.status, task.progress)
+    for (const sub of task.subtasks) {
+      // 每个素材独立的下载状态：name, status, progress, bytes_downloaded, total_bytes
+      updateSubtaskBar(sub)
+    }
+  })
+  es.addEventListener('done', (e) => {
+    const task = JSON.parse(e.data)
+    es.close()
+    if (task.status === 'done') resolve(task.result)
+    else reject(new Error('生成失败: ' + task.error))
+  })
+  es.onerror = () => { es.close(); reject(new Error('SSE 连接异常')) }
+})
+
+console.log('草稿已生成:', result)   // 草稿文件夹绝对路径
+
 // 4. 提示用户：打开剪映即可看到这个新草稿
 ```
+
+**降级方案（不用 SSE 改用轮询）**：去掉 EventSource 那段，改成 `while (true) { ... fetch(`/tasks/${task_id}`) ... }`，每 1500ms 拉一次，`data` 里同样有 `subtasks` 字段。SSE 更优是因为延迟更低 + 不浪费请求。
 
 ## 9. 服务没起来怎么办
 
