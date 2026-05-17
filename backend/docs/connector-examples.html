@@ -344,6 +344,48 @@
     .progress-bar.ok > div { background: var(--ok); }
     .progress-bar.err > div { background: var(--err); }
 
+    /* 真实演示顶部「4 种连接组件实时状态看板」面板 */
+    .live-preview-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .live-preview-panel .preview-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .live-preview-panel .preview-head h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--text);
+    }
+    .live-preview-panel .preview-head .phase-tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-weight: 500;
+      background: var(--surface-2);
+      color: var(--text-muted);
+    }
+    .live-preview-panel .preview-head .phase-tag[data-phase="scan"] { background: var(--accent-fade); color: var(--accent); }
+    .live-preview-panel .preview-head .phase-tag[data-phase="ok"] { background: var(--ok-fade); color: var(--ok); }
+    .live-preview-panel .preview-head .phase-tag[data-phase="warn"] { background: var(--warn-fade); color: var(--warn); }
+    .live-preview-panel .preview-head .phase-tag[data-phase="err"] { background: var(--err-fade); color: var(--err); }
+    .live-preview-panel .preview-head .phase-tag[data-phase="running"] { background: var(--accent-fade); color: var(--accent); }
+    .live-preview-panel > p.preview-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0 0 16px;
+    }
+
     /* 真实演示步骤 5 中的 4 种组件并排展示区 */
     .live-components-grid {
       display: grid;
@@ -811,6 +853,34 @@
         </ol>
       </div>
 
+      <!-- 4 组件实时状态看板：跟着下面 6 步流程动态刷新（扫描中 / 离线 /
+           已连接 / 需要授权 / 运行中 / 完成 / 失败），独立面板始终高亮可见 -->
+      <div class="live-preview-panel">
+        <div class="preview-head">
+          <h3>4 种连接组件实时状态看板</h3>
+          <span class="phase-tag" id="phase-tag" data-phase="scan">初始</span>
+        </div>
+        <p class="preview-desc">下面的 6 步流程每推进一步，这 4 个组件都会按当前状态自动刷新。无论是端口段扫不到、被 CORS 拦、正在生成草稿，还是已经完成——直观看出 4 种 UI 各自在该状态下长什么样。</p>
+        <div class="live-components-grid">
+          <div class="component-cell">
+            <span class="component-label">极简徽章 / Badge</span>
+            <div class="component-host" id="live-badge"></div>
+          </div>
+          <div class="component-cell">
+            <span class="component-label">内嵌按钮 / Inline</span>
+            <div class="component-host" id="live-inline"></div>
+          </div>
+          <div class="component-cell">
+            <span class="component-label">状态卡片 / Card</span>
+            <div class="component-host" id="live-card"></div>
+          </div>
+          <div class="component-cell">
+            <span class="component-label">完整向导 / Wizard</span>
+            <div class="component-host" id="live-wizard"></div>
+          </div>
+        </div>
+      </div>
+
       <ol class="live-steps">
         <li class="live-step" data-status="active" id="step-discover">
           <div class="step-head">
@@ -872,32 +942,12 @@
         <li class="live-step" data-status="pending" id="step-stream">
           <div class="step-head">
             <span class="step-num">5</span>
-            <h3 class="step-title">SSE 订阅实时进度（4 种 UI 同步刷新）</h3>
+            <h3 class="step-title">SSE 订阅实时进度</h3>
           </div>
-          <p class="step-desc">用 EventSource 订阅 stream_url，4 种连接组件接同一份数据实时刷新，看哪种 UI 适合塞进你的应用。</p>
+          <p class="step-desc">用 EventSource 订阅 stream_url，实时收到整体进度 + 每个素材子任务的字节进度（顶部 4 组件看板同步刷新）。</p>
           <div class="step-body">
             <div id="stream-status" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
             <div class="progress-bar" id="stream-progress" hidden><div style="width: 0"></div></div>
-
-            <p class="field-label" style="margin-top: 16px;">4 种连接组件实时刷新</p>
-            <div class="live-components-grid">
-              <div class="component-cell">
-                <span class="component-label">极简徽章 / Badge</span>
-                <div class="component-host" id="live-badge"></div>
-              </div>
-              <div class="component-cell">
-                <span class="component-label">内嵌按钮 / Inline</span>
-                <div class="component-host" id="live-inline"></div>
-              </div>
-              <div class="component-cell">
-                <span class="component-label">状态卡片 / Card</span>
-                <div class="component-host" id="live-card"></div>
-              </div>
-              <div class="component-cell">
-                <span class="component-label">完整向导 / Wizard</span>
-                <div class="component-host" id="live-wizard"></div>
-              </div>
-            </div>
 
             <p class="field-label" style="margin-top: 16px;" id="subtask-header" hidden>素材下载精确字节进度</p>
             <ul class="subtask-list" id="subtask-list"></ul>
@@ -1416,6 +1466,95 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
     }
     resetSpec()
 
+    // ===== 全局：4 组件实时状态看板 =====
+    // 任意流程节点（扫描中/离线/已连接/需要授权/运行中/完成/失败）调一次
+    // refreshLiveComponents 即可统一刷新 4 个组件 + 顶部 phase 标签
+
+    const PHASE_LABELS = {
+      scan: { text: '扫描中', tone: 'scan' },
+      offline: { text: '离线', tone: 'err' },
+      ok: { text: '已连接', tone: 'ok' },
+      warn: { text: '需要授权', tone: 'warn' },
+      running: { text: '运行中', tone: 'running' },
+      done: { text: '草稿已完成', tone: 'ok' },
+      failed: { text: '失败', tone: 'err' },
+    }
+
+    function setPhaseTag(phaseKey) {
+      const tag = document.getElementById('phase-tag')
+      const info = PHASE_LABELS[phaseKey] || PHASE_LABELS.scan
+      tag.dataset.phase = info.tone
+      tag.textContent = info.text
+    }
+
+    function refreshLiveComponents(state) {
+      const liveBadge = document.getElementById('live-badge')
+      const liveInline = document.getElementById('live-inline')
+      const liveCard = document.getElementById('live-card')
+      const liveWizard = document.getElementById('live-wizard')
+
+      renderBadgeInto(liveBadge, state, { clickable: false })
+      renderInlineInto(liveInline, state)
+      renderCardInto(liveCard, state)
+      refreshLiveWizard(liveWizard, state)
+
+      // 顶部 phase 标签：从 state 派生
+      if (state.type === 'scan') setPhaseTag('scan')
+      else if (state.type === 'offline') setPhaseTag('offline')
+      else if (state.type === 'health') {
+        setPhaseTag(state.health.cors_allowed === false ? 'warn' : 'ok')
+      } else if (state.type === 'task') {
+        if (state.task.status === 'done') setPhaseTag('done')
+        else if (state.task.status === 'failed') setPhaseTag('failed')
+        else setPhaseTag('running')
+      }
+    }
+
+    function refreshLiveWizard(host, state) {
+      // task 类型：复用 renderWizardForTask（前两步固定 done，第 3 步按 task.status）
+      if (state.type === 'task' && live.health) {
+        renderWizardForTask(host, state.task, live.health)
+        return
+      }
+      // 其他类型：按当前流程阶段构造 3 步状态
+      let stepStates
+      if (state.type === 'scan') {
+        stepStates = [
+          { num: 1, key: 'd', status: 'active', title: '发现本地服务', meta: '扫描端口 9527–9536' },
+          { num: 2, key: 'c', status: 'pending', title: '检查跨域授权', meta: '' },
+          { num: 3, key: 't', status: 'pending', title: '生成草稿', meta: '' },
+        ]
+      } else if (state.type === 'offline') {
+        stepStates = [
+          { num: 1, key: 'd', status: 'failed', title: '发现本地服务', meta: '端口段全部无响应' },
+          { num: 2, key: 'c', status: 'pending', title: '检查跨域授权', meta: '' },
+          { num: 3, key: 't', status: 'pending', title: '生成草稿', meta: '' },
+        ]
+      } else if (state.type === 'health') {
+        const h = state.health
+        if (h.cors_allowed === false) {
+          stepStates = [
+            { num: 1, key: 'd', status: 'done', title: '发现本地服务',
+              meta: `端口 ${h.port} · v${h.version}` },
+            { num: 2, key: 'c', status: 'failed', title: '检查跨域授权',
+              meta: `<code>${h.your_origin || '(无)'}</code> 不在白名单` },
+            { num: 3, key: 't', status: 'pending', title: '生成草稿', meta: '' },
+          ]
+        } else {
+          stepStates = [
+            { num: 1, key: 'd', status: 'done', title: '发现本地服务',
+              meta: `端口 ${h.port} · v${h.version}` },
+            { num: 2, key: 'c', status: 'done', title: '检查跨域授权', meta: '已授权' },
+            { num: 3, key: 't', status: 'pending', title: '生成草稿', meta: '等待提交' },
+          ]
+        }
+      }
+      renderWizardInto(host, { stepStates })
+    }
+
+    // 初始化：进入页面就显示 4 个组件（探测中状态），不是空白 cell
+    refreshLiveComponents({ type: 'scan' })
+
     async function discoverHelper({ timeoutMs = 500 } = {}) {
       const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
       const candidates = cached
@@ -1446,10 +1585,14 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
     async function runDiscover() {
       setStepStatus('step-discover', 'active')
       showResult('discover-result', '正在扫描端口段 9527–9536...')
+      refreshLiveComponents({ type: 'scan' })
       const result = await discoverHelper()
       if (!result) {
         setStepStatus('step-discover', 'failed')
         showResult('discover-result', '❌ 端口段全部无响应。请确认 capcut_helper 桌面应用已启动。', 'err')
+        // 4 组件看板同步切到「离线」状态，直观告诉用户每种 UI 在 helper
+        // 未运行时该展示什么
+        refreshLiveComponents({ type: 'offline' })
         return
       }
       live.port = result.port
@@ -1466,6 +1609,8 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       setStepStatus('step-check', 'active')
       const h = live.health
       showResult('check-result', JSON.stringify(h, null, 2))
+      // 4 组件看板：health 数据驱动（cors_allowed=false 自动切「需要授权」样式）
+      refreshLiveComponents({ type: 'health', health: h })
       const actions = document.getElementById('check-actions')
       actions.innerHTML = ''
 
@@ -1539,12 +1684,6 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       const subtaskHeader = document.getElementById('subtask-header')
       const eventsEl = document.getElementById('stream-events')
 
-      // 4 个组件 host：每次 progress 事件都同步刷新
-      const liveBadge = document.getElementById('live-badge')
-      const liveInline = document.getElementById('live-inline')
-      const liveCard = document.getElementById('live-card')
-      const liveWizard = document.getElementById('live-wizard')
-
       progressBar.hidden = false
       progressBar.className = 'progress-bar'
       eventsEl.textContent = ''
@@ -1567,16 +1706,6 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         }).join('')
       }
 
-      // 把同一个 task 派给 4 种组件刷新；组件内部根据 task.status 选择
-      // 「运行中 / 已完成 / 失败」对应的样式
-      const refreshComponents = (task) => {
-        const state = { type: 'task', task }
-        renderBadgeInto(liveBadge, state, { clickable: false })
-        renderInlineInto(liveInline, state)
-        renderCardInto(liveCard, state)
-        renderWizardForTask(liveWizard, task, live.health)
-      }
-
       const es = new EventSource(url)
       live.eventSource = es
 
@@ -1585,7 +1714,8 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         statusEl.textContent = `status=${task.status} · progress=${task.progress}%`
         progressInner.style.width = `${task.progress}%`
         renderSubtasks(task.subtasks || [])
-        refreshComponents(task)
+        // 顶部 4 组件看板：task 数据驱动（status 决定 运行中/完成/失败 样式）
+        refreshLiveComponents({ type: 'task', task })
         eventsEl.textContent += `[progress] ${new Date().toISOString().slice(11, 23)} status=${task.status} progress=${task.progress}\n`
         eventsEl.scrollTop = eventsEl.scrollHeight
       })
@@ -1594,7 +1724,7 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         const task = JSON.parse(e.data)
         es.close()
         live.eventSource = null
-        refreshComponents(task)
+        refreshLiveComponents({ type: 'task', task })
         eventsEl.textContent += `[done]     ${new Date().toISOString().slice(11, 23)} status=${task.status}\n`
         if (task.status === 'done') {
           progressBar.className = 'progress-bar ok'
