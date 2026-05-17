@@ -2,6 +2,8 @@
 
 本文档面向**调用 capcut_helper 本地服务的程序开发者**（首要是 `ai-canvas`，也包括其他想把素材导入剪映草稿的本地程序）。
 
+> 📦 **快速接入参考**：[connector-examples.html](./connector-examples.html) 提供 4 套现成的连接组件（极简徽章 / 状态卡片 / 内嵌按钮 / 完整向导），纯 HTML + vanilla JS、零依赖、复制即用。本地浏览器打开即可看效果，建议先看一眼再读文档。
+
 ## 1. 这个服务是做什么的
 
 `capcut_helper` 是一个跑在用户本机的桌面应用，启动后在 localhost 起一个 HTTP 服务。调用方把一份「时间线规格」（画布参数 + 多轨道 + 每个片段的素材 URL 和时间位置）POST 给它，它就会：

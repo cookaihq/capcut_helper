@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>capcut_helper 连接组件示例</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-2: #f5f5f7;
+      --text: #1d1d1f;
+      --text-muted: #6e6e73;
+      --text-faint: #a1a1a6;
+      --border: #e5e5ea;
+      --border-strong: #d2d2d7;
+      --accent: #5e6ad2;
+      --accent-hover: #4c56b8;
+      --accent-fade: #eef0ff;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --warn-fade: #fef3c7;
+      --err: #ef4444;
+      --err-fade: #fee2e2;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161618;
+        --surface: #1c1c1e;
+        --surface-2: #242427;
+        --text: #f5f5f7;
+        --text-muted: #98989d;
+        --text-faint: #6e6e73;
+        --border: #2c2c2e;
+        --border-strong: #3a3a3c;
+        --accent: #7c84e0;
+        --accent-hover: #9097e8;
+        --accent-fade: #25263a;
+        --warn-fade: #3a2f17;
+        --err-fade: #3a1f1f;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 48px 32px 96px;
+    }
+    header.hero {
+      margin-bottom: 56px;
+    }
+    header.hero h1 {
+      font-size: 32px;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    header.hero p {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 15px;
+    }
+    .global-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 48px;
+      box-shadow: var(--shadow-sm);
+    }
+    .global-bar .label {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .global-bar .info {
+      flex: 1;
+      font-size: 14px;
+      color: var(--text);
+      font-family: var(--mono);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--surface-2); border-color: var(--text-faint); }
+    .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn.warn { background: var(--warn); color: white; border-color: var(--warn); }
+    .btn.warn:hover { filter: brightness(0.95); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .example {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px 0;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .example header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .example header h2 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+    .example header .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--accent-fade);
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .example > .desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+    .example .preview {
+      background: var(--surface-2);
+      border: 1px dashed var(--border-strong);
+      border-radius: 8px;
+      padding: 32px 24px;
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .example details {
+      margin: 0 -28px;
+      border-top: 1px solid var(--border);
+    }
+    .example details summary {
+      cursor: pointer;
+      padding: 14px 28px;
+      font-size: 13px;
+      color: var(--text-muted);
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .example details summary::before {
+      content: "▸";
+      transition: transform 0.15s ease;
+      display: inline-block;
+      color: var(--text-faint);
+    }
+    .example details[open] summary::before { transform: rotate(90deg); }
+    .example details summary:hover { color: var(--text); }
+    .example .code-block {
+      position: relative;
+      background: var(--surface-2);
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+    .example .code-block pre {
+      margin: 0;
+      padding: 20px 28px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      max-height: 420px;
+    }
+    .example .code-block .copy {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      padding: 4px 10px;
+      font-size: 11px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .example .code-block .copy:hover { color: var(--text); }
+    .example .code-block .copy.copied { color: var(--ok); border-color: var(--ok); }
+
+    /* ===== 组件 1：极简徽章 ===== */
+    .ch-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 100px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      box-shadow: var(--shadow-sm);
+      cursor: default;
+      transition: all 0.2s ease;
+    }
+    .ch-badge.clickable { cursor: pointer; }
+    .ch-badge.clickable:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .ch-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-faint);
+      box-shadow: 0 0 0 3px rgba(161, 161, 166, 0.2);
+    }
+    .ch-badge[data-state="ok"] .dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    .ch-badge[data-state="warn"] .dot { background: var(--warn); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+    .ch-badge[data-state="err"] .dot { background: var(--err); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+    .ch-badge[data-state="scan"] .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(94, 106, 210, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(94, 106, 210, 0); }
+    }
+
+    /* ===== 组件 2：状态卡片 ===== */
+    .ch-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .ch-card .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .ch-card .head .title { font-size: 14px; font-weight: 600; }
+    .ch-card .head .pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 100px;
+      font-weight: 500;
+    }
+    .ch-card .head .pill[data-state="ok"] { background: rgba(16, 185, 129, 0.12); color: var(--ok); }
+    .ch-card .head .pill[data-state="warn"] { background: var(--warn-fade); color: var(--warn); }
+    .ch-card .head .pill[data-state="err"] { background: var(--err-fade); color: var(--err); }
+    .ch-card .head .pill[data-state="scan"] { background: var(--accent-fade); color: var(--accent); }
+    .ch-card .body { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; min-height: 32px; }
+    .ch-card .body .strong { color: var(--text); font-weight: 500; }
+    .ch-card .body code {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 1px 5px;
+      background: var(--surface-2);
+      border-radius: 3px;
+    }
+    .ch-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ch-card .update-hint {
+      margin-top: 12px;
+      padding: 8px 10px;
+      background: var(--accent-fade);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ch-card .update-hint a { color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+    /* ===== 组件 3：内嵌按钮 ===== */
+    .ch-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .ch-inline[data-state="ok"] {
+      background: rgba(16, 185, 129, 0.08);
+      color: var(--ok);
+      border-color: rgba(16, 185, 129, 0.25);
+      cursor: default;
+    }
+    .ch-inline[data-state="warn"] {
+      background: var(--warn);
+      color: white;
+      border-color: var(--warn);
+    }
+    .ch-inline[data-state="warn"]:hover { filter: brightness(0.95); }
+    .ch-inline[data-state="err"] {
+      background: var(--surface);
+      color: var(--err);
+      border-color: var(--err);
+    }
+    .ch-inline[data-state="err"]:hover { background: var(--err-fade); }
+    .ch-inline[data-state="scan"] {
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border-color: var(--border-strong);
+      cursor: wait;
+    }
+    .ch-inline .icon { font-size: 14px; line-height: 1; }
+
+    /* ===== 组件 4：完整向导 ===== */
+    .ch-wizard {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .ch-wizard h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .ch-wizard .sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0 0 20px;
+    }
+    .ch-wizard ol.steps {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px;
+    }
+    .ch-wizard ol.steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .ch-wizard ol.steps li:last-child { border-bottom: none; }
+    .ch-wizard .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--text-faint);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .ch-wizard ol.steps li[data-status="done"] .step-num {
+      background: var(--ok);
+      color: white;
+    }
+    .ch-wizard ol.steps li[data-status="active"] .step-num {
+      background: var(--accent);
+      color: white;
+    }
+    .ch-wizard ol.steps li[data-status="failed"] .step-num {
+      background: var(--err);
+      color: white;
+    }
+    .ch-wizard .step-body { flex: 1; }
+    .ch-wizard .step-title { font-weight: 500; color: var(--text); }
+    .ch-wizard .step-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .ch-wizard .step-meta code {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 1px 5px;
+      background: var(--surface-2);
+      border-radius: 3px;
+    }
+    .ch-wizard .wizard-action {
+      display: flex;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* notes */
+    .notes {
+      margin-top: 56px;
+      padding: 24px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .notes h2 { font-size: 18px; margin: 0 0 12px; letter-spacing: -0.01em; }
+    .notes p { font-size: 14px; color: var(--text-muted); margin: 0 0 12px; }
+    .notes ul { font-size: 14px; color: var(--text-muted); padding-left: 22px; margin: 0 0 12px; }
+    .notes a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>capcut_helper 连接组件示例</h1>
+      <p>给调用方应用接入剪映助手的 4 套现成 UI 组件 — 极简徽章、状态卡片、内嵌按钮、完整向导。<br />
+        全部纯 HTML + vanilla JS，复制即用，无任何依赖。</p>
+    </header>
+
+    <div class="global-bar">
+      <span class="label">全局状态</span>
+      <span class="info" id="globalInfo">未探测</span>
+      <button class="btn" onclick="rescan()">重新探测</button>
+    </div>
+
+    <!-- ===== 组件 1：极简徽章 ===== -->
+    <section class="example">
+      <header>
+        <h2>1. 极简徽章</h2>
+        <span class="tag">Minimal</span>
+      </header>
+      <p class="desc">小圆点 + 状态文字，浮在页面角落不抢戏。未授权时整个徽章可点击直接唤起授权。</p>
+      <div class="preview">
+        <div id="badgePreview"></div>
+      </div>
+      <details>
+        <summary>查看代码</summary>
+        <div class="code-block">
+          <button class="copy" data-target="code-badge">复制</button>
+          <pre id="code-badge"><code>&lt;!-- HTML --&gt;
+&lt;div id="capcutBadge" class="ch-badge" data-state="scan"&gt;
+  &lt;span class="dot"&gt;&lt;/span&gt;&lt;span class="text"&gt;探测中&lt;/span&gt;
+&lt;/div&gt;
+
+&lt;!-- CSS（按需复制顶部 .ch-badge 段） --&gt;
+
+&lt;script&gt;
+async function mountBadge() {
+  const el = document.getElementById('capcutBadge')
+  const text = el.querySelector('.text')
+  const result = await discoverHelper()           // 见文末「共享底层」
+  if (!result) {
+    el.dataset.state = 'err'
+    text.textContent = '剪映助手未运行'
+    el.classList.remove('clickable')
+    el.onclick = null
+    return
+  }
+  const { health } = result
+  if (health.cors_allowed === false) {
+    el.dataset.state = 'warn'
+    text.textContent = '需要授权'
+    el.classList.add('clickable')
+    el.onclick = () =&gt; { location.href = health.trust_url }
+  } else {
+    el.dataset.state = 'ok'
+    text.textContent = '已连接 v' + health.version
+    el.classList.remove('clickable')
+    el.onclick = null
+  }
+}
+mountBadge()
+&lt;/script&gt;</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===== 组件 2：状态卡片 ===== -->
+    <section class="example">
+      <header>
+        <h2>2. 状态卡片</h2>
+        <span class="tag">Card</span>
+      </header>
+      <p class="desc">完整信息展示 + 上下文 action 按钮。适合放在调用方设置页或集成入口。</p>
+      <div class="preview">
+        <div id="cardPreview"></div>
+      </div>
+      <details>
+        <summary>查看代码</summary>
+        <div class="code-block">
+          <button class="copy" data-target="code-card">复制</button>
+          <pre id="code-card"><code>&lt;!-- HTML --&gt;
+&lt;div id="capcutCard" class="ch-card"&gt;
+  &lt;div class="head"&gt;
+    &lt;span class="title"&gt;剪映助手&lt;/span&gt;
+    &lt;span class="pill" data-state="scan"&gt;探测中&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="body"&gt;正在扫描本地端口...&lt;/div&gt;
+  &lt;div class="actions"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+async function mountCard() {
+  const root = document.getElementById('capcutCard')
+  const pill = root.querySelector('.pill')
+  const body = root.querySelector('.body')
+  const actions = root.querySelector('.actions')
+
+  const result = await discoverHelper()
+  if (!result) {
+    pill.dataset.state = 'err'
+    pill.textContent = '离线'
+    body.innerHTML = '未在端口 9527–9536 找到剪映助手。请先启动桌面应用。'
+    actions.innerHTML = `&lt;button class="btn" onclick="mountCard()"&gt;重新探测&lt;/button&gt;`
+    return
+  }
+
+  const { health } = result
+  if (health.cors_allowed === false) {
+    pill.dataset.state = 'warn'
+    pill.textContent = '需要授权'
+    body.innerHTML = `当前页面 &lt;code&gt;${health.your_origin}&lt;/code&gt; 还未被剪映助手信任，`
+                   + `点下方按钮唤起授权弹窗。`
+    actions.innerHTML = `
+      &lt;button class="btn primary" onclick="location.href='${health.trust_url}'"&gt;允许接入&lt;/button&gt;
+      &lt;button class="btn" onclick="mountCard()"&gt;我已授权，重试&lt;/button&gt;`
+  } else {
+    pill.dataset.state = 'ok'
+    pill.textContent = '已连接'
+    body.innerHTML = `&lt;span class="strong"&gt;v${health.version}&lt;/span&gt; · 端口 ${health.port}`
+    actions.innerHTML = ''
+  }
+
+  if (health.has_update) {
+    const hint = document.createElement('div')
+    hint.className = 'update-hint'
+    hint.innerHTML = `🎉 新版 v${health.latest_version} 可用 ·
+      &lt;a onclick="window.open('${health.release_url}','_blank')"&gt;查看更新&lt;/a&gt;`
+    root.appendChild(hint)
+  }
+}
+mountCard()
+&lt;/script&gt;</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===== 组件 3：内嵌按钮 ===== -->
+    <section class="example">
+      <header>
+        <h2>3. 内嵌按钮</h2>
+        <span class="tag">Inline</span>
+      </header>
+      <p class="desc">单按钮形态，状态变化驱动文案、颜色、点击行为切换。适合塞进调用方应用的工具栏。</p>
+      <div class="preview">
+        <button id="inlinePreview" class="ch-inline" data-state="scan">
+          <span class="icon">⏳</span><span class="text">探测中</span>
+        </button>
+      </div>
+      <details>
+        <summary>查看代码</summary>
+        <div class="code-block">
+          <button class="copy" data-target="code-inline">复制</button>
+          <pre id="code-inline"><code>&lt;!-- HTML --&gt;
+&lt;button id="capcutInline" class="ch-inline" data-state="scan"&gt;
+  &lt;span class="icon"&gt;⏳&lt;/span&gt;&lt;span class="text"&gt;探测中&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;script&gt;
+async function mountInline() {
+  const btn = document.getElementById('capcutInline')
+  const icon = btn.querySelector('.icon')
+  const text = btn.querySelector('.text')
+  btn.onclick = null
+
+  const result = await discoverHelper()
+  if (!result) {
+    btn.dataset.state = 'err'
+    icon.textContent = '⚠'
+    text.textContent = '剪映助手未运行 · 点击重试'
+    btn.onclick = mountInline
+    return
+  }
+  const { health } = result
+  if (health.cors_allowed === false) {
+    btn.dataset.state = 'warn'
+    icon.textContent = '🔓'
+    text.textContent = '点击授权剪映助手'
+    btn.onclick = () =&gt; { location.href = health.trust_url }
+  } else {
+    btn.dataset.state = 'ok'
+    icon.textContent = '✓'
+    text.textContent = `剪映助手已连接 v${health.version}`
+    btn.onclick = null
+  }
+}
+mountInline()
+&lt;/script&gt;</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===== 组件 4：完整向导 ===== -->
+    <section class="example">
+      <header>
+        <h2>4. 完整向导</h2>
+        <span class="tag">Wizard</span>
+      </header>
+      <p class="desc">分步骤展示「发现 → 自检 → 授权 → 测试」全流程。适合首次接入引导页 / 故障诊断面板。</p>
+      <div class="preview">
+        <div id="wizardPreview"></div>
+      </div>
+      <details>
+        <summary>查看代码</summary>
+        <div class="code-block">
+          <button class="copy" data-target="code-wizard">复制</button>
+          <pre id="code-wizard"><code>&lt;!-- HTML --&gt;
+&lt;div id="capcutWizard" class="ch-wizard"&gt;
+  &lt;h3&gt;接入剪映助手&lt;/h3&gt;
+  &lt;p class="sub"&gt;按以下步骤完成连接，之后即可一键导出到剪映草稿。&lt;/p&gt;
+  &lt;ol class="steps"&gt;
+    &lt;li data-status="active" data-step="discover"&gt;
+      &lt;span class="step-num"&gt;1&lt;/span&gt;
+      &lt;div class="step-body"&gt;
+        &lt;div class="step-title"&gt;发现本地服务&lt;/div&gt;
+        &lt;div class="step-meta"&gt;扫描端口 9527–9536&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/li&gt;
+    &lt;li data-status="pending" data-step="cors"&gt;
+      &lt;span class="step-num"&gt;2&lt;/span&gt;
+      &lt;div class="step-body"&gt;
+        &lt;div class="step-title"&gt;检查跨域授权&lt;/div&gt;
+        &lt;div class="step-meta"&gt;确认本页面在白名单&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/li&gt;
+    &lt;li data-status="pending" data-step="done"&gt;
+      &lt;span class="step-num"&gt;3&lt;/span&gt;
+      &lt;div class="step-body"&gt;
+        &lt;div class="step-title"&gt;就绪&lt;/div&gt;
+        &lt;div class="step-meta"&gt;可以调用业务接口&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+  &lt;div class="wizard-action"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+async function runWizard() {
+  const root = document.getElementById('capcutWizard')
+  const setStep = (key, status, meta) =&gt; {
+    const li = root.querySelector(`li[data-step="${key}"]`)
+    li.dataset.status = status
+    if (meta) li.querySelector('.step-meta').innerHTML = meta
+  }
+  const setAction = (html) =&gt; { root.querySelector('.wizard-action').innerHTML = html }
+
+  setStep('discover', 'active'); setStep('cors', 'pending'); setStep('done', 'pending'); setAction('')
+
+  const result = await discoverHelper()
+  if (!result) {
+    setStep('discover', 'failed', '端口段全部无响应')
+    setAction(`&lt;button class="btn primary" onclick="runWizard()"&gt;重新探测&lt;/button&gt;`)
+    return
+  }
+  setStep('discover', 'done', `端口 ${result.port} · v${result.health.version}`)
+
+  setStep('cors', 'active')
+  if (result.health.cors_allowed === false) {
+    setStep('cors', 'failed', `当前 origin &lt;code&gt;${result.health.your_origin}&lt;/code&gt; 不在白名单`)
+    setAction(`
+      &lt;button class="btn primary" onclick="location.href='${result.health.trust_url}'"&gt;允许接入&lt;/button&gt;
+      &lt;button class="btn" onclick="runWizard()"&gt;我已授权，重试&lt;/button&gt;`)
+    return
+  }
+  setStep('cors', 'done', '已授权')
+  setStep('done', 'done', '可以调用 /api/v1/drafts')
+  setAction('')
+}
+runWizard()
+&lt;/script&gt;</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===== 共享底层 ===== -->
+    <section class="example">
+      <header>
+        <h2>共享底层工具函数</h2>
+        <span class="tag">Shared</span>
+      </header>
+      <p class="desc">上面所有组件都依赖这两个函数（<code>discoverHelper</code> / <code>requestTrust</code>）。
+        放在你的项目里某个 utils 文件，按需 import。</p>
+      <div class="preview" style="padding: 12px; align-items: stretch;">
+        <div style="font-size: 12px; color: var(--text-muted); font-family: var(--mono); text-align: left; width: 100%;">
+          没有可视化预览 — 见下方代码。
+        </div>
+      </div>
+      <details open>
+        <summary>查看代码</summary>
+        <div class="code-block">
+          <button class="copy" data-target="code-shared">复制</button>
+          <pre id="code-shared"><code>const HELPER_PORT_KEY = 'capcut_helper_port'
+const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
+
+/**
+ * 扫端口段找 capcut_helper 本地服务。命中后返回 { port, health }；全部失败返回 null。
+ * 顺序：先尝试 localStorage 缓存的端口（如果有），失败再扫整段。
+ */
+async function discoverHelper({ timeoutMs = 500 } = {}) {
+  const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
+  const candidates = cached
+    ? [cached, ...HELPER_PORT_RANGE.filter((p) =&gt; p !== cached)]
+    : HELPER_PORT_RANGE
+
+  for (const port of candidates) {
+    try {
+      const resp = await fetch(`http://localhost:${port}/api/v1/health`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (!resp.ok) continue
+      const body = await resp.json()
+      const health = body?.data
+      if (health?.service === 'capcut_helper') {
+        localStorage.setItem(HELPER_PORT_KEY, String(port))
+        return { port, health }
+      }
+    } catch {
+      // 端口无服务 / 超时 / 不是 capcut_helper，继续尝试下一个
+    }
+  }
+  return null
+}
+
+/**
+ * 唤起剪映助手桌面应用弹出授权确认。注意：浏览器会先弹「是否打开 capcut-helper」
+ * 系统确认框，用户点确认后才会拉起应用。链接由 health 返回，origin 已正确编码。
+ */
+function requestTrust(health) {
+  if (!health?.trust_url) {
+    throw new Error('health.trust_url 不存在 — 只在 cors_allowed=false 时才会下发')
+  }
+  location.href = health.trust_url
+}</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <div class="notes">
+      <h2>接入要点</h2>
+      <ul>
+        <li>所有组件都依赖 <code>discoverHelper()</code> 探测端口段 9527–9536。<strong>必须以 health 返回的 service === "capcut_helper" 为准</strong>，不要假设某个端口就是 helper（可能撞到本机别的服务）。</li>
+        <li><code>cors_allowed === false</code> 时一定要给用户明确指引，<strong>不要等业务接口报 Failed to fetch 才反应</strong>。指引文案可以直接用 <code>health.hint</code>。</li>
+        <li>点击 <code>trust_url</code> 浏览器会先弹一个系统级「是否打开 capcut-helper」确认框，用户点允许后才会拉起 helper 桌面应用并弹授权 Modal。<strong>这是浏览器安全模型，不可绕过</strong>，文案要让用户预期到这个跳转。</li>
+        <li>用户在 helper 里点「允许」后，CORS 白名单是<strong>热生效</strong>的（不需要重启 helper）。所以「允许接入」按钮后面紧跟一个「我已授权，重试」按钮就足够，无需提示「请重启应用」。</li>
+        <li>所有组件的视觉风格（颜色、圆角、间距）都通过页面顶部的 CSS 变量（<code>:root</code>）控制，按你自己的设计系统改即可。暗色模式自动适配。</li>
+        <li>更详细的字段说明与边界情况见 <a href="./CALLER_GUIDE.md">CALLER_GUIDE.md</a>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ runtime ============ -->
+  <script>
+    const HELPER_PORT_KEY = 'capcut_helper_port'
+    const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
+
+    async function discoverHelper({ timeoutMs = 500 } = {}) {
+      const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
+      const candidates = cached
+        ? [cached, ...HELPER_PORT_RANGE.filter((p) => p !== cached)]
+        : HELPER_PORT_RANGE
+      for (const port of candidates) {
+        try {
+          const resp = await fetch(`http://localhost:${port}/api/v1/health`, {
+            signal: AbortSignal.timeout(timeoutMs),
+          })
+          if (!resp.ok) continue
+          const body = await resp.json()
+          const health = body?.data
+          if (health?.service === 'capcut_helper') {
+            localStorage.setItem(HELPER_PORT_KEY, String(port))
+            return { port, health }
+          }
+        } catch { /* 继续下一个 */ }
+      }
+      return null
+    }
+
+    function setGlobalInfo(text) {
+      document.getElementById('globalInfo').textContent = text
+    }
+
+    // ========= 组件 1：badge =========
+    function renderBadge(result) {
+      const host = document.getElementById('badgePreview')
+      host.innerHTML = ''
+      const el = document.createElement('div')
+      el.className = 'ch-badge'
+      const dot = document.createElement('span'); dot.className = 'dot'
+      const text = document.createElement('span'); text.className = 'text'
+      el.append(dot, text)
+      host.appendChild(el)
+
+      if (!result) {
+        el.dataset.state = 'err'; text.textContent = '剪映助手未运行'
+      } else if (result.health.cors_allowed === false) {
+        el.dataset.state = 'warn'; text.textContent = '需要授权'
+        el.classList.add('clickable')
+        el.onclick = () => alert('demo：实际部署时点击会跳转 ' + result.health.trust_url)
+      } else {
+        el.dataset.state = 'ok'; text.textContent = '已连接 v' + result.health.version
+      }
+    }
+
+    // ========= 组件 2：card =========
+    function renderCard(result) {
+      const host = document.getElementById('cardPreview')
+      host.innerHTML = `
+        <div class="ch-card">
+          <div class="head">
+            <span class="title">剪映助手</span>
+            <span class="pill"></span>
+          </div>
+          <div class="body"></div>
+          <div class="actions"></div>
+        </div>`
+      const root = host.querySelector('.ch-card')
+      const pill = root.querySelector('.pill')
+      const body = root.querySelector('.body')
+      const actions = root.querySelector('.actions')
+
+      if (!result) {
+        pill.dataset.state = 'err'; pill.textContent = '离线'
+        body.innerHTML = '未在端口 9527–9536 找到剪映助手。请先启动桌面应用。'
+        actions.innerHTML = `<button class="btn" onclick="rescan()">重新探测</button>`
+        return
+      }
+      const h = result.health
+      if (h.cors_allowed === false) {
+        pill.dataset.state = 'warn'; pill.textContent = '需要授权'
+        body.innerHTML = `当前页面 <code>${h.your_origin || '(无 origin)'}</code> 还未被剪映助手信任，点下方按钮唤起授权弹窗。`
+        actions.innerHTML = `
+          <button class="btn primary" onclick="alert('demo：实际部署会跳转 ${h.trust_url}')">允许接入</button>
+          <button class="btn" onclick="rescan()">我已授权，重试</button>`
+      } else {
+        pill.dataset.state = 'ok'; pill.textContent = '已连接'
+        body.innerHTML = `<span class="strong">v${h.version}</span> · 端口 ${h.port}`
+        actions.innerHTML = ''
+      }
+      if (h.has_update) {
+        const hint = document.createElement('div')
+        hint.className = 'update-hint'
+        hint.innerHTML = `🎉 新版 v${h.latest_version} 可用 · <a onclick="window.open('${h.release_url}','_blank')">查看更新</a>`
+        root.appendChild(hint)
+      }
+    }
+
+    // ========= 组件 3：inline =========
+    function renderInline(result) {
+      const btn = document.getElementById('inlinePreview')
+      const icon = btn.querySelector('.icon')
+      const text = btn.querySelector('.text')
+      btn.onclick = null
+
+      if (!result) {
+        btn.dataset.state = 'err'; icon.textContent = '⚠'; text.textContent = '剪映助手未运行 · 点击重试'
+        btn.onclick = rescan
+      } else if (result.health.cors_allowed === false) {
+        btn.dataset.state = 'warn'; icon.textContent = '🔓'; text.textContent = '点击授权剪映助手'
+        btn.onclick = () => alert('demo：实际部署会跳转 ' + result.health.trust_url)
+      } else {
+        btn.dataset.state = 'ok'; icon.textContent = '✓'; text.textContent = `剪映助手已连接 v${result.health.version}`
+      }
+    }
+
+    // ========= 组件 4：wizard =========
+    function renderWizard(result) {
+      const host = document.getElementById('wizardPreview')
+      host.innerHTML = `
+        <div class="ch-wizard">
+          <h3>接入剪映助手</h3>
+          <p class="sub">按以下步骤完成连接，之后即可一键导出到剪映草稿。</p>
+          <ol class="steps">
+            <li data-status="pending" data-step="discover">
+              <span class="step-num">1</span>
+              <div class="step-body">
+                <div class="step-title">发现本地服务</div>
+                <div class="step-meta">扫描端口 9527–9536</div>
+              </div>
+            </li>
+            <li data-status="pending" data-step="cors">
+              <span class="step-num">2</span>
+              <div class="step-body">
+                <div class="step-title">检查跨域授权</div>
+                <div class="step-meta">确认本页面在白名单</div>
+              </div>
+            </li>
+            <li data-status="pending" data-step="done">
+              <span class="step-num">3</span>
+              <div class="step-body">
+                <div class="step-title">就绪</div>
+                <div class="step-meta">可以调用业务接口</div>
+              </div>
+            </li>
+          </ol>
+          <div class="wizard-action"></div>
+        </div>`
+      const root = host.querySelector('.ch-wizard')
+      const setStep = (key, status, meta) => {
+        const li = root.querySelector(`li[data-step="${key}"]`)
+        li.dataset.status = status
+        if (meta) li.querySelector('.step-meta').innerHTML = meta
+      }
+      const setAction = (html) => { root.querySelector('.wizard-action').innerHTML = html }
+
+      if (!result) {
+        setStep('discover', 'failed', '端口段全部无响应')
+        setAction(`<button class="btn primary" onclick="rescan()">重新探测</button>`)
+        return
+      }
+      setStep('discover', 'done', `端口 ${result.port} · v${result.health.version}`)
+      const h = result.health
+      if (h.cors_allowed === false) {
+        setStep('cors', 'failed', `当前 origin <code>${h.your_origin || '(无)'}</code> 不在白名单`)
+        setAction(`
+          <button class="btn primary" onclick="alert('demo：实际部署会跳转 ${h.trust_url}')">允许接入</button>
+          <button class="btn" onclick="rescan()">我已授权，重试</button>`)
+        return
+      }
+      setStep('cors', 'done', '已授权')
+      setStep('done', 'done', '可以调用 /api/v1/drafts')
+    }
+
+    // ========= 重新探测：刷新所有组件 =========
+    async function rescan() {
+      setGlobalInfo('探测中...')
+      ;['badgePreview', 'cardPreview', 'wizardPreview'].forEach((id) => {
+        const host = document.getElementById(id); if (host) host.innerHTML = ''
+      })
+      const inlineBtn = document.getElementById('inlinePreview')
+      inlineBtn.dataset.state = 'scan'
+      inlineBtn.querySelector('.icon').textContent = '⏳'
+      inlineBtn.querySelector('.text').textContent = '探测中'
+
+      const result = await discoverHelper()
+      if (!result) {
+        setGlobalInfo('未找到 capcut_helper（端口段 9527–9536 全部无响应）')
+      } else {
+        const h = result.health
+        const tags = []
+        tags.push(`port=${result.port}`)
+        tags.push(`v${h.version}`)
+        tags.push(h.cors_allowed === null ? 'cors=null' : `cors_allowed=${h.cors_allowed}`)
+        if (h.has_update) tags.push(`新版 v${h.latest_version}`)
+        setGlobalInfo(tags.join(' · '))
+      }
+      renderBadge(result)
+      renderCard(result)
+      renderInline(result)
+      renderWizard(result)
+    }
+
+    // ========= 复制按钮 =========
+    document.querySelectorAll('.copy').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const target = document.getElementById(btn.dataset.target)
+        if (!target) return
+        try {
+          await navigator.clipboard.writeText(target.textContent)
+          btn.classList.add('copied')
+          const orig = btn.textContent
+          btn.textContent = '已复制'
+          setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied') }, 1500)
+        } catch {
+          btn.textContent = '复制失败'
+        }
+      })
+    })
+
+    rescan()
+  </script>
+</body>
+</html>
