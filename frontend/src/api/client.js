@@ -23,3 +23,9 @@ export const putConfig = (cfg) =>
     body: JSON.stringify(cfg),
   })
 export const getUpdateInfo = () => request('/update/check')
+export const approveOrigin = (origin) =>
+  request('/cors-origins', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ origin }),
+  })

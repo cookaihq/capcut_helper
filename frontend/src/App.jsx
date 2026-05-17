@@ -3,6 +3,7 @@ import { useState } from 'react'
 import StatusBar from './components/StatusBar.jsx'
 import DraftRootBanner from './components/DraftRootBanner.jsx'
 import UpdateBanner from './components/UpdateBanner.jsx'
+import TrustRequestModal from './components/TrustRequestModal.jsx'
 import ActivityView from './views/ActivityView.jsx'
 import DraftsView from './views/DraftsView.jsx'
 import SettingsView from './views/SettingsView.jsx'
@@ -34,6 +35,7 @@ export default function App() {
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 16px' }}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={items} />
       </div>
+      <TrustRequestModal />
     </div>
   )
 }
