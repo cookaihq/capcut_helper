@@ -1723,9 +1723,19 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
       const liveCard = document.getElementById('live-card')
       const liveWizard = document.getElementById('live-wizard')
 
-      renderBadgeInto(liveBadge, state, { clickable: false })
-      renderInlineInto(liveInline, state)
-      renderCardInto(liveCard, state)
+      // 看板里 cors_allowed=false 时，3 个组件的「点击授权」入口都走真实
+      // location.href = trust_url（与步骤 2 的「允许接入」按钮等效）；任一
+      // 组件独立可用，用户在哪个组件点都能唤起 helper。
+      const onTrustClick = (state.type === 'health' && state.health.trust_url)
+        ? () => { window.location.href = state.health.trust_url }
+        : undefined
+      const trustFnInline = (state.type === 'health' && state.health.trust_url)
+        ? `window.location.href='${state.health.trust_url}'`
+        : ''
+
+      renderBadgeInto(liveBadge, state, { onTrustClick })
+      renderInlineInto(liveInline, state, { onTrustClick })
+      renderCardInto(liveCard, state, { trustFn: trustFnInline })
       refreshLiveWizard(liveWizard, state)
 
       // 顶部 phase 标签：从 state 派生
