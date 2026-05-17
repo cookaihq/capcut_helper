@@ -17,7 +17,7 @@ export default function ActivityView() {
 
   if (tasks.length === 0) {
     return (
-      <Empty description="还没有导入任务。在 ai-canvas 里排好时间线点导入，这里会显示进度。" />
+      <Empty description="还没有导入任务。" />
     )
   }
 
