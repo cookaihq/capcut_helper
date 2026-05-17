@@ -607,7 +607,14 @@
       white-space: nowrap;
     }
     .ch-badge.clickable { cursor: pointer; }
+    .ch-badge.clickable .text {
+      /* 下划线 dotted 暗示可点击但避免做成超链接的"硬"感 */
+      text-decoration: underline dotted;
+      text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+      text-underline-offset: 3px;
+    }
     .ch-badge.clickable:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .ch-badge.clickable:hover .text { text-decoration-color: currentColor; }
     .ch-badge .dot {
       width: 8px;
       height: 8px;
@@ -1199,7 +1206,7 @@ function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
         }
       } else if (state.health.cors_allowed === false) {
         el.dataset.state = 'warn'
-        text.textContent = '需要授权'
+        text.textContent = '点击授权剪映助手'
         if (opts.clickable !== false) {
           el.classList.add('clickable')
           el.title = '点击唤起剪映助手授权'

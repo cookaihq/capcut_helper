@@ -1,6 +1,6 @@
 import { Button, Form, Input, InputNumber, Select, Space, message } from 'antd'
 import { useEffect, useState } from 'react'
-import { getConfig, putConfig } from '../api/client.js'
+import { getConfig, putConfig, restartApp } from '../api/client.js'
 import { detectDraftRoot, isBridgeAvailable, pickFolder } from '../api/bridge.js'
 
 export default function SettingsView({ onSaved }) {
@@ -9,16 +9,22 @@ export default function SettingsView({ onSaved }) {
   const bridgeOn = isBridgeAvailable()
 
   useEffect(() => {
-    getConfig()
-      .then((cfg) =>
-        form.setFieldsValue({
-          draft_root: cfg.draft_root || '',
-          port_start: cfg.port_range[0],
-          port_end: cfg.port_range[1],
-          cors_origins: cfg.cors_origins,
-        }),
-      )
-      .catch(() => {})
+    const reload = () =>
+      getConfig()
+        .then((cfg) =>
+          form.setFieldsValue({
+            draft_root: cfg.draft_root || '',
+            port_start: cfg.port_range[0],
+            port_end: cfg.port_range[1],
+            cors_origins: cfg.cors_origins,
+          }),
+        )
+        .catch(() => {})
+    reload()
+    // 监听 backend 外部触发的 config 变更（如 TrustRequestModal 允许接入后
+    // POST /cors-origins）—— 重新拉 config 让设置面板里立刻能看到新增项
+    window.addEventListener('capcut-helper:config-changed', reload)
+    return () => window.removeEventListener('capcut-helper:config-changed', reload)
   }, [form])
 
   const pickDir = async () => {
@@ -45,11 +51,20 @@ export default function SettingsView({ onSaved }) {
         port_range: [v.port_start, v.port_end],
         cors_origins: v.cors_origins || [],
       })
-      message.success('已保存')
-      onSaved && onSaved()
     } catch (err) {
       message.error(err.message || '保存失败')
-    } finally {
+      setSaving(false)
+      return
+    }
+    // 保存成功 → 触发后端重启。后端会先返回 200 再 spawn 新实例 + 自杀，
+    // 当前窗口随之被销毁；不需要 setSaving(false)，loading 提示持续到进程退出
+    message.loading({ content: '已保存，正在重启…', duration: 0 })
+    try {
+      await restartApp()
+      onSaved && onSaved()
+    } catch (err) {
+      message.destroy()
+      message.error(err.message || '重启失败，请手动退出后重新打开')
       setSaving(false)
     }
   }
@@ -85,14 +100,13 @@ export default function SettingsView({ onSaved }) {
           <Form.Item name="port_end" noStyle>
             <InputNumber min={1} max={65535} />
           </Form.Item>
-          <span style={{ color: '#999', fontSize: 12 }}>修改端口段需重启应用生效</span>
         </Space>
       </Form.Item>
       <Form.Item label="CORS 白名单" name="cors_origins">
         <Select mode="tags" placeholder="输入 origin 后回车，如 http://localhost:3182" />
       </Form.Item>
       <Button type="primary" loading={saving} onClick={onSave}>
-        保存
+        保存并重启生效
       </Button>
     </Form>
   )

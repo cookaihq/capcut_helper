@@ -39,6 +39,9 @@ export default function TrustRequestModal() {
     try {
       await approveOrigin(origin)
       message.success(`已允许 ${origin} 接入剪映助手`)
+      // 通知 SettingsView 重新拉 config 刷新「CORS 白名单」UI；否则刚加的
+      // origin 虽然已经写入 backend，设置面板里却看不到新增项（用户困惑）
+      window.dispatchEvent(new CustomEvent('capcut-helper:config-changed'))
       close()
     } catch (err) {
       message.error('授权失败：' + (err?.message || '未知错误'))
