@@ -29,3 +29,4 @@ export const approveOrigin = (origin) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ origin }),
   })
+export const restartApp = () => request('/system/restart', { method: 'POST' })
