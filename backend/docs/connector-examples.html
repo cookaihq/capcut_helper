@@ -18,6 +18,7 @@
       --accent-hover: #4c56b8;
       --accent-fade: #eef0ff;
       --ok: #10b981;
+      --ok-fade: #d1fae5;
       --warn: #f59e0b;
       --warn-fade: #fef3c7;
       --err: #ef4444;
@@ -40,6 +41,7 @@
         --accent: #7c84e0;
         --accent-hover: #9097e8;
         --accent-fade: #25263a;
+        --ok-fade: #1f3a2c;
         --warn-fade: #3a2f17;
         --err-fade: #3a1f1f;
         --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -56,12 +58,12 @@
       -webkit-font-smoothing: antialiased;
     }
     .page {
-      max-width: 1080px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: 48px 32px 96px;
     }
     header.hero {
-      margin-bottom: 56px;
+      margin-bottom: 32px;
     }
     header.hero h1 {
       font-size: 32px;
@@ -73,29 +75,35 @@
       margin: 0;
       font-size: 15px;
     }
-    .global-bar {
+
+    /* ===== Tab 切换 ===== */
+    .tabs {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 18px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 48px;
-      box-shadow: var(--shadow-sm);
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
     }
-    .global-bar .label {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .global-bar .info {
-      flex: 1;
+    .tabs button {
+      background: none;
+      border: none;
+      padding: 12px 20px;
       font-size: 14px;
-      color: var(--text);
-      font-family: var(--mono);
+      font-family: inherit;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s ease;
     }
+    .tabs button:hover { color: var(--text); }
+    .tabs button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 500;
+    }
+    .tab-content[hidden] { display: none; }
+
+    /* ===== 通用按钮 ===== */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -110,100 +118,254 @@
       transition: all 0.15s ease;
       font-family: inherit;
     }
-    .btn:hover { background: var(--surface-2); border-color: var(--text-faint); }
+    .btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--text-faint); }
     .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
-    .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
     .btn.warn { background: var(--warn); color: white; border-color: var(--warn); }
-    .btn.warn:hover { filter: brightness(0.95); }
+    .btn.warn:hover:not(:disabled) { filter: brightness(0.95); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.small { padding: 4px 10px; font-size: 12px; }
 
-    .example {
+    /* ===== Part 1：状态画廊 ===== */
+    .gallery-intro {
+      padding: 14px 18px;
+      background: var(--accent-fade);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: var(--radius);
+      margin-bottom: 32px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .gallery-intro strong { color: var(--accent); }
+    .gallery-section {
+      margin-bottom: 48px;
+    }
+    .gallery-section > h2 {
+      font-size: 20px;
+      letter-spacing: -0.01em;
+      margin: 0 0 6px;
+    }
+    .gallery-section > p.section-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: 0 0 20px;
+    }
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .state-cell {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 28px 28px 0;
-      margin-bottom: 32px;
+      padding: 20px;
       box-shadow: var(--shadow-sm);
-      overflow: hidden;
-    }
-    .example header {
       display: flex;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 4px;
+      flex-direction: column;
+      gap: 14px;
     }
-    .example header h2 {
-      font-size: 18px;
-      margin: 0;
-      letter-spacing: -0.01em;
-    }
-    .example header .tag {
+    .state-cell .state-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: var(--accent-fade);
-      color: var(--accent);
       font-weight: 500;
-    }
-    .example > .desc {
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
       color: var(--text-muted);
-      font-size: 14px;
-      margin: 0 0 20px;
     }
-    .example .preview {
-      background: var(--surface-2);
-      border: 1px dashed var(--border-strong);
-      border-radius: 8px;
-      padding: 32px 24px;
-      margin-bottom: 0;
+    .state-cell .state-tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-faint);
+    }
+    .state-cell .state-tag[data-tone="ok"]::before { background: var(--ok); }
+    .state-cell .state-tag[data-tone="warn"]::before { background: var(--warn); }
+    .state-cell .state-tag[data-tone="err"]::before { background: var(--err); }
+    .state-cell .state-tag[data-tone="scan"]::before { background: var(--accent); }
+    .state-cell .preview {
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 120px;
+      min-height: 80px;
+      padding: 12px 0;
     }
-    .example details {
-      margin: 0 -28px;
-      border-top: 1px solid var(--border);
+    .state-cell.wide {
+      grid-column: span 2;
     }
-    .example details summary {
-      cursor: pointer;
-      padding: 14px 28px;
+    @media (max-width: 720px) {
+      .state-cell.wide { grid-column: span 1; }
+    }
+
+    /* ===== Part 2：真实演示 ===== */
+    .live-banner {
+      padding: 16px 20px;
+      background: var(--warn-fade);
+      border: 1px solid var(--warn);
+      border-radius: var(--radius);
+      margin-bottom: 32px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .live-banner strong { color: var(--warn); }
+    .live-banner code {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 1px 6px;
+      background: var(--surface);
+      border-radius: 3px;
+    }
+    .live-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .live-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+    .live-step[data-status="pending"] {
+      opacity: 0.5;
+      filter: grayscale(0.5);
+    }
+    .live-step[data-status="active"] {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-fade);
+    }
+    .live-step[data-status="done"] {
+      border-left: 3px solid var(--ok);
+    }
+    .live-step[data-status="failed"] {
+      border-left: 3px solid var(--err);
+    }
+    .live-step .step-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .live-step .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .live-step[data-status="done"] .step-num { background: var(--ok); color: white; }
+    .live-step[data-status="active"] .step-num { background: var(--accent); color: white; }
+    .live-step[data-status="failed"] .step-num { background: var(--err); color: white; }
+    .live-step .step-title {
+      font-size: 15px;
+      font-weight: 500;
+      margin: 0;
+    }
+    .live-step .step-desc {
       font-size: 13px;
       color: var(--text-muted);
-      list-style: none;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      margin: 0 0 14px;
+      padding-left: 32px;
     }
-    .example details summary::before {
-      content: "▸";
-      transition: transform 0.15s ease;
-      display: inline-block;
-      color: var(--text-faint);
-    }
-    .example details[open] summary::before { transform: rotate(90deg); }
-    .example details summary:hover { color: var(--text); }
-    .example .code-block {
-      position: relative;
+    .live-step .step-body { padding-left: 32px; }
+    .live-step .step-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .live-step .result-box {
+      margin-top: 12px;
+      padding: 12px 14px;
       background: var(--surface-2);
-      border-top: 1px solid var(--border);
-      margin: 0;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
     }
-    .example .code-block pre {
+    .live-step .result-box.ok { background: var(--ok-fade); }
+    .live-step .result-box.err { background: var(--err-fade); }
+    .live-step input, .live-step textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .live-step textarea {
+      min-height: 200px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .live-step input:focus, .live-step textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-fade);
+    }
+    .live-step .field-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0 0 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--surface-2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-bar > div {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    .progress-bar.ok > div { background: var(--ok); }
+    .progress-bar.err > div { background: var(--err); }
+
+    /* ===== 共享底层 ===== */
+    .shared-source {
+      margin-top: 56px;
+      padding: 24px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .shared-source h2 { font-size: 18px; margin: 0 0 8px; }
+    .shared-source p { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+    .shared-source pre {
       margin: 0;
-      padding: 20px 28px;
+      padding: 16px;
+      background: var(--surface-2);
+      border-radius: 6px;
       overflow-x: auto;
       font-family: var(--mono);
       font-size: 12px;
       line-height: 1.6;
-      color: var(--text);
-      max-height: 420px;
+      max-height: 480px;
     }
-    .example .code-block .copy {
-      position: absolute;
-      top: 12px;
-      right: 16px;
+    .shared-source .copy {
+      float: right;
       padding: 4px 10px;
       font-size: 11px;
       background: var(--surface);
@@ -213,8 +375,8 @@
       color: var(--text-muted);
       transition: all 0.15s ease;
     }
-    .example .code-block .copy:hover { color: var(--text); }
-    .example .code-block .copy.copied { color: var(--ok); border-color: var(--ok); }
+    .shared-source .copy:hover { color: var(--text); }
+    .shared-source .copy.copied { color: var(--ok); border-color: var(--ok); }
 
     /* ===== 组件 1：极简徽章 ===== */
     .ch-badge {
@@ -227,10 +389,11 @@
       border-radius: 100px;
       font-size: 13px;
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       box-shadow: var(--shadow-sm);
       cursor: default;
       transition: all 0.2s ease;
+      max-width: 100%;
+      white-space: nowrap;
     }
     .ch-badge.clickable { cursor: pointer; }
     .ch-badge.clickable:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
@@ -240,6 +403,7 @@
       border-radius: 50%;
       background: var(--text-faint);
       box-shadow: 0 0 0 3px rgba(161, 161, 166, 0.2);
+      flex-shrink: 0;
     }
     .ch-badge[data-state="ok"] .dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
     .ch-badge[data-state="warn"] .dot { background: var(--warn); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
@@ -253,53 +417,48 @@
     /* ===== 组件 2：状态卡片 ===== */
     .ch-card {
       width: 100%;
-      max-width: 360px;
+      max-width: 320px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 20px;
+      padding: 18px;
       box-shadow: var(--shadow-md);
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .ch-card .head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    .ch-card .head .title { font-size: 14px; font-weight: 600; }
+    .ch-card .head .title { font-size: 13px; font-weight: 600; }
     .ch-card .head .pill {
       font-size: 11px;
       padding: 3px 8px;
       border-radius: 100px;
       font-weight: 500;
     }
-    .ch-card .head .pill[data-state="ok"] { background: rgba(16, 185, 129, 0.12); color: var(--ok); }
+    .ch-card .head .pill[data-state="ok"] { background: var(--ok-fade); color: var(--ok); }
     .ch-card .head .pill[data-state="warn"] { background: var(--warn-fade); color: var(--warn); }
     .ch-card .head .pill[data-state="err"] { background: var(--err-fade); color: var(--err); }
     .ch-card .head .pill[data-state="scan"] { background: var(--accent-fade); color: var(--accent); }
-    .ch-card .body { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; min-height: 32px; }
+    .ch-card .body { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
     .ch-card .body .strong { color: var(--text); font-weight: 500; }
     .ch-card .body code {
       font-family: var(--mono);
-      font-size: 12px;
+      font-size: 11px;
       padding: 1px 5px;
       background: var(--surface-2);
       border-radius: 3px;
     }
-    .ch-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ch-card .actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .ch-card .update-hint {
-      margin-top: 12px;
+      margin-top: 10px;
       padding: 8px 10px;
       background: var(--accent-fade);
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--accent);
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
-    .ch-card .update-hint a { color: var(--accent); text-decoration: underline; cursor: pointer; }
 
     /* ===== 组件 3：内嵌按钮 ===== */
     .ch-inline {
@@ -309,15 +468,17 @@
       padding: 8px 14px;
       border-radius: 8px;
       font-size: 13px;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       cursor: pointer;
       border: 1px solid transparent;
       transition: all 0.15s ease;
+      font-family: inherit;
+      max-width: 100%;
+      white-space: nowrap;
     }
     .ch-inline[data-state="ok"] {
-      background: rgba(16, 185, 129, 0.08);
+      background: var(--ok-fade);
       color: var(--ok);
-      border-color: rgba(16, 185, 129, 0.25);
+      border-color: color-mix(in srgb, var(--ok) 30%, transparent);
       cursor: default;
     }
     .ch-inline[data-state="warn"] {
@@ -343,391 +504,227 @@
     /* ===== 组件 4：完整向导 ===== */
     .ch-wizard {
       width: 100%;
-      max-width: 480px;
+      max-width: 420px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 24px;
+      padding: 20px;
       box-shadow: var(--shadow-md);
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .ch-wizard h3 {
-      margin: 0 0 6px;
-      font-size: 16px;
-      letter-spacing: -0.01em;
+      margin: 0 0 4px;
+      font-size: 14px;
+      font-weight: 600;
     }
     .ch-wizard .sub {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
-      margin: 0 0 20px;
+      margin: 0 0 14px;
     }
     .ch-wizard ol.steps {
       list-style: none;
       padding: 0;
-      margin: 0 0 20px;
+      margin: 0 0 14px;
     }
     .ch-wizard ol.steps li {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
-      padding: 10px 0;
+      gap: 10px;
+      padding: 8px 0;
       border-bottom: 1px solid var(--border);
-      font-size: 13px;
+      font-size: 12px;
     }
     .ch-wizard ol.steps li:last-child { border-bottom: none; }
     .ch-wizard .step-num {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: var(--surface-2);
       color: var(--text-faint);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       flex-shrink: 0;
       margin-top: 1px;
     }
-    .ch-wizard ol.steps li[data-status="done"] .step-num {
-      background: var(--ok);
-      color: white;
-    }
-    .ch-wizard ol.steps li[data-status="active"] .step-num {
-      background: var(--accent);
-      color: white;
-    }
-    .ch-wizard ol.steps li[data-status="failed"] .step-num {
-      background: var(--err);
-      color: white;
-    }
+    .ch-wizard ol.steps li[data-status="done"] .step-num { background: var(--ok); color: white; }
+    .ch-wizard ol.steps li[data-status="active"] .step-num { background: var(--accent); color: white; }
+    .ch-wizard ol.steps li[data-status="failed"] .step-num { background: var(--err); color: white; }
     .ch-wizard .step-body { flex: 1; }
-    .ch-wizard .step-title { font-weight: 500; color: var(--text); }
-    .ch-wizard .step-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .ch-wizard .step-title { font-weight: 500; color: var(--text); font-size: 12px; }
+    .ch-wizard .step-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
     .ch-wizard .step-meta code {
       font-family: var(--mono);
-      font-size: 11px;
-      padding: 1px 5px;
+      font-size: 10px;
+      padding: 1px 4px;
       background: var(--surface-2);
       border-radius: 3px;
     }
     .ch-wizard .wizard-action {
       display: flex;
-      gap: 8px;
-      padding-top: 8px;
+      gap: 6px;
+      padding-top: 6px;
       border-top: 1px solid var(--border);
     }
-
-    /* notes */
-    .notes {
-      margin-top: 56px;
-      padding: 24px 28px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-    }
-    .notes h2 { font-size: 18px; margin: 0 0 12px; letter-spacing: -0.01em; }
-    .notes p { font-size: 14px; color: var(--text-muted); margin: 0 0 12px; }
-    .notes ul { font-size: 14px; color: var(--text-muted); padding-left: 22px; margin: 0 0 12px; }
-    .notes a { color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="page">
     <header class="hero">
       <h1>capcut_helper 连接组件示例</h1>
-      <p>给调用方应用接入剪映助手的 4 套现成 UI 组件 — 极简徽章、状态卡片、内嵌按钮、完整向导。<br />
-        全部纯 HTML + vanilla JS，复制即用，无任何依赖。</p>
+      <p>第一部分看「组件状态画廊」（纯静态预览，不需要 helper 运行）<br />
+        第二部分跑「真实端到端演示」（需要 helper 真实运行 + 当前页面 origin 在白名单），完整走通 发现 → 自检 → 授权 → 创建草稿 → 任务轮询。</p>
     </header>
 
-    <div class="global-bar">
-      <span class="label">全局状态</span>
-      <span class="info" id="globalInfo">未探测</span>
-      <button class="btn" onclick="rescan()">重新探测</button>
-    </div>
+    <nav class="tabs" role="tablist">
+      <button data-tab="gallery" class="active" role="tab">📑 组件状态画廊</button>
+      <button data-tab="live" role="tab">🔌 真实端到端演示</button>
+    </nav>
 
-    <!-- ===== 组件 1：极简徽章 ===== -->
-    <section class="example">
-      <header>
-        <h2>1. 极简徽章</h2>
-        <span class="tag">Minimal</span>
-      </header>
-      <p class="desc">小圆点 + 状态文字，浮在页面角落不抢戏。未授权时整个徽章可点击直接唤起授权。</p>
-      <div class="preview">
-        <div id="badgePreview"></div>
+    <!-- ============ PART 1: 状态画廊 ============ -->
+    <section id="tab-gallery" class="tab-content" role="tabpanel">
+      <div class="gallery-intro">
+        <strong>📑 状态画廊</strong>用 fixture 数据驱动渲染，<strong>不与 helper 通信</strong>。每个组件下方展示 4–5 种主要状态的视觉效果，复制 HTML/CSS 时可以一眼对照每种状态长什么样。
       </div>
-      <details>
-        <summary>查看代码</summary>
-        <div class="code-block">
-          <button class="copy" data-target="code-badge">复制</button>
-          <pre id="code-badge"><code>&lt;!-- HTML --&gt;
-&lt;div id="capcutBadge" class="ch-badge" data-state="scan"&gt;
-  &lt;span class="dot"&gt;&lt;/span&gt;&lt;span class="text"&gt;探测中&lt;/span&gt;
-&lt;/div&gt;
 
-&lt;!-- CSS（按需复制顶部 .ch-badge 段） --&gt;
+      <!-- 组件 1：极简徽章 -->
+      <div class="gallery-section">
+        <h2>1. 极简徽章 / Badge</h2>
+        <p class="section-desc">小圆点 + 状态文字。适合放在调用方页面右上角不抢戏。</p>
+        <div class="state-grid" id="gallery-badge"></div>
+      </div>
 
-&lt;script&gt;
-async function mountBadge() {
-  const el = document.getElementById('capcutBadge')
-  const text = el.querySelector('.text')
-  const result = await discoverHelper()           // 见文末「共享底层」
-  if (!result) {
-    el.dataset.state = 'err'
-    text.textContent = '剪映助手未运行'
-    el.classList.remove('clickable')
-    el.onclick = null
-    return
-  }
-  const { health } = result
-  if (health.cors_allowed === false) {
-    el.dataset.state = 'warn'
-    text.textContent = '需要授权'
-    el.classList.add('clickable')
-    el.onclick = () =&gt; { location.href = health.trust_url }
-  } else {
-    el.dataset.state = 'ok'
-    text.textContent = '已连接 v' + health.version
-    el.classList.remove('clickable')
-    el.onclick = null
-  }
-}
-mountBadge()
-&lt;/script&gt;</code></pre>
-        </div>
-      </details>
+      <!-- 组件 2：状态卡片 -->
+      <div class="gallery-section">
+        <h2>2. 状态卡片 / Card</h2>
+        <p class="section-desc">完整信息展示 + 上下文 action 按钮。适合设置页或集成入口。</p>
+        <div class="state-grid" id="gallery-card"></div>
+      </div>
+
+      <!-- 组件 3：内嵌按钮 -->
+      <div class="gallery-section">
+        <h2>3. 内嵌按钮 / Inline</h2>
+        <p class="section-desc">单按钮形态，文案/颜色/点击行为随状态切换。适合工具栏。</p>
+        <div class="state-grid" id="gallery-inline"></div>
+      </div>
+
+      <!-- 组件 4：完整向导 -->
+      <div class="gallery-section">
+        <h2>4. 完整向导 / Wizard</h2>
+        <p class="section-desc">分步骤展示「发现 → 自检 → 授权 → 就绪」全流程。适合首次接入引导。</p>
+        <div class="state-grid" id="gallery-wizard"></div>
+      </div>
     </section>
 
-    <!-- ===== 组件 2：状态卡片 ===== -->
-    <section class="example">
-      <header>
-        <h2>2. 状态卡片</h2>
-        <span class="tag">Card</span>
-      </header>
-      <p class="desc">完整信息展示 + 上下文 action 按钮。适合放在调用方设置页或集成入口。</p>
-      <div class="preview">
-        <div id="cardPreview"></div>
+    <!-- ============ PART 2: 真实端到端演示 ============ -->
+    <section id="tab-live" class="tab-content" role="tabpanel" hidden>
+      <div class="live-banner">
+        <strong>⚠️ 运行前确认</strong>
+        <ol style="margin: 8px 0 0 18px; padding: 0;">
+          <li>capcut_helper 桌面应用已启动</li>
+          <li>helper 的「剪映草稿根目录」已配置（否则草稿创建会失败，<code>code 1001</code>）</li>
+          <li>当前页面的 origin 在 helper 的 CORS 白名单内 —— 用本地 server 打开本文件，如 <code>python -m http.server 8000</code>，然后访问 <code>http://localhost:8000/connector-examples.html</code>；不要直接 file:// 打开，<code>Origin: null</code> 会被拦</li>
+          <li>第 5 步会真实下载素材并写入剪映草稿目录，确认你的网络能访问预填的素材 URL</li>
+        </ol>
       </div>
-      <details>
-        <summary>查看代码</summary>
-        <div class="code-block">
-          <button class="copy" data-target="code-card">复制</button>
-          <pre id="code-card"><code>&lt;!-- HTML --&gt;
-&lt;div id="capcutCard" class="ch-card"&gt;
-  &lt;div class="head"&gt;
-    &lt;span class="title"&gt;剪映助手&lt;/span&gt;
-    &lt;span class="pill" data-state="scan"&gt;探测中&lt;/span&gt;
-  &lt;/div&gt;
-  &lt;div class="body"&gt;正在扫描本地端口...&lt;/div&gt;
-  &lt;div class="actions"&gt;&lt;/div&gt;
-&lt;/div&gt;
 
-&lt;script&gt;
-async function mountCard() {
-  const root = document.getElementById('capcutCard')
-  const pill = root.querySelector('.pill')
-  const body = root.querySelector('.body')
-  const actions = root.querySelector('.actions')
+      <ol class="live-steps">
+        <li class="live-step" data-status="active" id="step-discover">
+          <div class="step-head">
+            <span class="step-num">1</span>
+            <h3 class="step-title">发现 capcut_helper</h3>
+          </div>
+          <p class="step-desc">扫描端口段 9527–9536，找到本地服务（health.service === 'capcut_helper'）。</p>
+          <div class="step-body">
+            <div class="step-actions">
+              <button class="btn primary" onclick="runDiscover()">扫描端口段</button>
+            </div>
+            <div class="result-box" id="discover-result" hidden></div>
+          </div>
+        </li>
 
-  const result = await discoverHelper()
-  if (!result) {
-    pill.dataset.state = 'err'
-    pill.textContent = '离线'
-    body.innerHTML = '未在端口 9527–9536 找到剪映助手。请先启动桌面应用。'
-    actions.innerHTML = `&lt;button class="btn" onclick="mountCard()"&gt;重新探测&lt;/button&gt;`
-    return
-  }
+        <li class="live-step" data-status="pending" id="step-check">
+          <div class="step-head">
+            <span class="step-num">2</span>
+            <h3 class="step-title">CORS 自检（health 完整响应）</h3>
+          </div>
+          <p class="step-desc">读 health 的 cors_allowed 字段判断当前 origin 是否被信任，未授权时给出明确动作。</p>
+          <div class="step-body">
+            <div class="result-box" id="check-result" hidden></div>
+            <div class="step-actions" id="check-actions"></div>
+          </div>
+        </li>
 
-  const { health } = result
-  if (health.cors_allowed === false) {
-    pill.dataset.state = 'warn'
-    pill.textContent = '需要授权'
-    body.innerHTML = `当前页面 &lt;code&gt;${health.your_origin}&lt;/code&gt; 还未被剪映助手信任，`
-                   + `点下方按钮唤起授权弹窗。`
-    actions.innerHTML = `
-      &lt;button class="btn primary" onclick="location.href='${health.trust_url}'"&gt;允许接入&lt;/button&gt;
-      &lt;button class="btn" onclick="mountCard()"&gt;我已授权，重试&lt;/button&gt;`
-  } else {
-    pill.dataset.state = 'ok'
-    pill.textContent = '已连接'
-    body.innerHTML = `&lt;span class="strong"&gt;v${health.version}&lt;/span&gt; · 端口 ${health.port}`
-    actions.innerHTML = ''
-  }
+        <li class="live-step" data-status="pending" id="step-spec">
+          <div class="step-head">
+            <span class="step-num">3</span>
+            <h3 class="step-title">准备时间线规格</h3>
+          </div>
+          <p class="step-desc">编辑草稿名和时间线 JSON。默认预填一个 10s Big Buck Bunny 视频示例。</p>
+          <div class="step-body">
+            <p class="field-label">草稿名（带时间戳防重名）</p>
+            <input type="text" id="input-draft-name" />
+            <p class="field-label">时间线规格（JSON）</p>
+            <textarea id="input-spec" spellcheck="false"></textarea>
+            <div class="step-actions">
+              <button class="btn small" onclick="resetSpec()">恢复默认示例</button>
+            </div>
+          </div>
+        </li>
 
-  if (health.has_update) {
-    const hint = document.createElement('div')
-    hint.className = 'update-hint'
-    hint.innerHTML = `🎉 新版 v${health.latest_version} 可用 ·
-      &lt;a onclick="window.open('${health.release_url}','_blank')"&gt;查看更新&lt;/a&gt;`
-    root.appendChild(hint)
-  }
-}
-mountCard()
-&lt;/script&gt;</code></pre>
-        </div>
-      </details>
-    </section>
+        <li class="live-step" data-status="pending" id="step-submit">
+          <div class="step-head">
+            <span class="step-num">4</span>
+            <h3 class="step-title">提交草稿（POST /drafts）</h3>
+          </div>
+          <p class="step-desc">把规格 POST 给 helper，立刻拿到一个 task_id。</p>
+          <div class="step-body">
+            <div class="step-actions">
+              <button class="btn primary" id="btn-submit" onclick="runSubmit()">提交</button>
+            </div>
+            <div class="result-box" id="submit-result" hidden></div>
+          </div>
+        </li>
 
-    <!-- ===== 组件 3：内嵌按钮 ===== -->
-    <section class="example">
-      <header>
-        <h2>3. 内嵌按钮</h2>
-        <span class="tag">Inline</span>
-      </header>
-      <p class="desc">单按钮形态，状态变化驱动文案、颜色、点击行为切换。适合塞进调用方应用的工具栏。</p>
-      <div class="preview">
-        <button id="inlinePreview" class="ch-inline" data-state="scan">
-          <span class="icon">⏳</span><span class="text">探测中</span>
-        </button>
-      </div>
-      <details>
-        <summary>查看代码</summary>
-        <div class="code-block">
-          <button class="copy" data-target="code-inline">复制</button>
-          <pre id="code-inline"><code>&lt;!-- HTML --&gt;
-&lt;button id="capcutInline" class="ch-inline" data-state="scan"&gt;
-  &lt;span class="icon"&gt;⏳&lt;/span&gt;&lt;span class="text"&gt;探测中&lt;/span&gt;
-&lt;/button&gt;
+        <li class="live-step" data-status="pending" id="step-poll">
+          <div class="step-head">
+            <span class="step-num">5</span>
+            <h3 class="step-title">轮询任务进度</h3>
+          </div>
+          <p class="step-desc">每 1.5s 查一次 /tasks/{id}，实时显示 status / progress，直到 done 或 failed。</p>
+          <div class="step-body">
+            <div id="poll-status" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
+            <div class="progress-bar" id="poll-progress" hidden><div style="width: 0"></div></div>
+            <div class="result-box" id="poll-result" hidden></div>
+          </div>
+        </li>
 
-&lt;script&gt;
-async function mountInline() {
-  const btn = document.getElementById('capcutInline')
-  const icon = btn.querySelector('.icon')
-  const text = btn.querySelector('.text')
-  btn.onclick = null
+        <li class="live-step" data-status="pending" id="step-done">
+          <div class="step-head">
+            <span class="step-num">6</span>
+            <h3 class="step-title">完成 ✓</h3>
+          </div>
+          <p class="step-desc">草稿已生成。打开剪映即可看到，可以继续在剪映里编辑。</p>
+          <div class="step-body">
+            <div class="result-box ok" id="done-result" hidden></div>
+          </div>
+        </li>
+      </ol>
 
-  const result = await discoverHelper()
-  if (!result) {
-    btn.dataset.state = 'err'
-    icon.textContent = '⚠'
-    text.textContent = '剪映助手未运行 · 点击重试'
-    btn.onclick = mountInline
-    return
-  }
-  const { health } = result
-  if (health.cors_allowed === false) {
-    btn.dataset.state = 'warn'
-    icon.textContent = '🔓'
-    text.textContent = '点击授权剪映助手'
-    btn.onclick = () =&gt; { location.href = health.trust_url }
-  } else {
-    btn.dataset.state = 'ok'
-    icon.textContent = '✓'
-    text.textContent = `剪映助手已连接 v${health.version}`
-    btn.onclick = null
-  }
-}
-mountInline()
-&lt;/script&gt;</code></pre>
-        </div>
-      </details>
-    </section>
-
-    <!-- ===== 组件 4：完整向导 ===== -->
-    <section class="example">
-      <header>
-        <h2>4. 完整向导</h2>
-        <span class="tag">Wizard</span>
-      </header>
-      <p class="desc">分步骤展示「发现 → 自检 → 授权 → 测试」全流程。适合首次接入引导页 / 故障诊断面板。</p>
-      <div class="preview">
-        <div id="wizardPreview"></div>
-      </div>
-      <details>
-        <summary>查看代码</summary>
-        <div class="code-block">
-          <button class="copy" data-target="code-wizard">复制</button>
-          <pre id="code-wizard"><code>&lt;!-- HTML --&gt;
-&lt;div id="capcutWizard" class="ch-wizard"&gt;
-  &lt;h3&gt;接入剪映助手&lt;/h3&gt;
-  &lt;p class="sub"&gt;按以下步骤完成连接，之后即可一键导出到剪映草稿。&lt;/p&gt;
-  &lt;ol class="steps"&gt;
-    &lt;li data-status="active" data-step="discover"&gt;
-      &lt;span class="step-num"&gt;1&lt;/span&gt;
-      &lt;div class="step-body"&gt;
-        &lt;div class="step-title"&gt;发现本地服务&lt;/div&gt;
-        &lt;div class="step-meta"&gt;扫描端口 9527–9536&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/li&gt;
-    &lt;li data-status="pending" data-step="cors"&gt;
-      &lt;span class="step-num"&gt;2&lt;/span&gt;
-      &lt;div class="step-body"&gt;
-        &lt;div class="step-title"&gt;检查跨域授权&lt;/div&gt;
-        &lt;div class="step-meta"&gt;确认本页面在白名单&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/li&gt;
-    &lt;li data-status="pending" data-step="done"&gt;
-      &lt;span class="step-num"&gt;3&lt;/span&gt;
-      &lt;div class="step-body"&gt;
-        &lt;div class="step-title"&gt;就绪&lt;/div&gt;
-        &lt;div class="step-meta"&gt;可以调用业务接口&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/li&gt;
-  &lt;/ol&gt;
-  &lt;div class="wizard-action"&gt;&lt;/div&gt;
-&lt;/div&gt;
-
-&lt;script&gt;
-async function runWizard() {
-  const root = document.getElementById('capcutWizard')
-  const setStep = (key, status, meta) =&gt; {
-    const li = root.querySelector(`li[data-step="${key}"]`)
-    li.dataset.status = status
-    if (meta) li.querySelector('.step-meta').innerHTML = meta
-  }
-  const setAction = (html) =&gt; { root.querySelector('.wizard-action').innerHTML = html }
-
-  setStep('discover', 'active'); setStep('cors', 'pending'); setStep('done', 'pending'); setAction('')
-
-  const result = await discoverHelper()
-  if (!result) {
-    setStep('discover', 'failed', '端口段全部无响应')
-    setAction(`&lt;button class="btn primary" onclick="runWizard()"&gt;重新探测&lt;/button&gt;`)
-    return
-  }
-  setStep('discover', 'done', `端口 ${result.port} · v${result.health.version}`)
-
-  setStep('cors', 'active')
-  if (result.health.cors_allowed === false) {
-    setStep('cors', 'failed', `当前 origin &lt;code&gt;${result.health.your_origin}&lt;/code&gt; 不在白名单`)
-    setAction(`
-      &lt;button class="btn primary" onclick="location.href='${result.health.trust_url}'"&gt;允许接入&lt;/button&gt;
-      &lt;button class="btn" onclick="runWizard()"&gt;我已授权，重试&lt;/button&gt;`)
-    return
-  }
-  setStep('cors', 'done', '已授权')
-  setStep('done', 'done', '可以调用 /api/v1/drafts')
-  setAction('')
-}
-runWizard()
-&lt;/script&gt;</code></pre>
-        </div>
-      </details>
-    </section>
-
-    <!-- ===== 共享底层 ===== -->
-    <section class="example">
-      <header>
+      <!-- 共享底层源码 -->
+      <div class="shared-source">
         <h2>共享底层工具函数</h2>
-        <span class="tag">Shared</span>
-      </header>
-      <p class="desc">上面所有组件都依赖这两个函数（<code>discoverHelper</code> / <code>requestTrust</code>）。
-        放在你的项目里某个 utils 文件，按需 import。</p>
-      <div class="preview" style="padding: 12px; align-items: stretch;">
-        <div style="font-size: 12px; color: var(--text-muted); font-family: var(--mono); text-align: left; width: 100%;">
-          没有可视化预览 — 见下方代码。
-        </div>
-      </div>
-      <details open>
-        <summary>查看代码</summary>
-        <div class="code-block">
-          <button class="copy" data-target="code-shared">复制</button>
-          <pre id="code-shared"><code>const HELPER_PORT_KEY = 'capcut_helper_port'
+        <p>上面所有组件都基于这两个函数（<code>discoverHelper</code> / <code>fetchHealth</code>）。
+          放到你的项目里某个 utils 文件，按需 import。</p>
+        <button class="copy" data-target="shared-code">复制</button>
+        <pre id="shared-code"><code>const HELPER_PORT_KEY = 'capcut_helper_port'
 const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
 
 /**
  * 扫端口段找 capcut_helper 本地服务。命中后返回 { port, health }；全部失败返回 null。
- * 顺序：先尝试 localStorage 缓存的端口（如果有），失败再扫整段。
+ * 先尝试 localStorage 缓存的端口（如果有），失败再扫整段。
  */
 async function discoverHelper({ timeoutMs = 500 } = {}) {
   const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
@@ -747,16 +744,21 @@ async function discoverHelper({ timeoutMs = 500 } = {}) {
         localStorage.setItem(HELPER_PORT_KEY, String(port))
         return { port, health }
       }
-    } catch {
-      // 端口无服务 / 超时 / 不是 capcut_helper，继续尝试下一个
-    }
+    } catch { /* 端口无服务 / 超时 / 不是 capcut_helper，继续 */ }
   }
   return null
 }
 
+/** 已知端口时直接拉 health（用于「我已授权重试」场景，跳过端口扫描）。 */
+async function fetchHealth(port) {
+  const resp = await fetch(`http://localhost:${port}/api/v1/health`)
+  const body = await resp.json()
+  return body.data
+}
+
 /**
  * 唤起剪映助手桌面应用弹出授权确认。注意：浏览器会先弹「是否打开 capcut-helper」
- * 系统确认框，用户点确认后才会拉起应用。链接由 health 返回，origin 已正确编码。
+ * 系统确认框，用户点确认后才会拉起应用。trust_url 由 health 返回，origin 已正确编码。
  */
 function requestTrust(health) {
   if (!health?.trust_url) {
@@ -764,27 +766,339 @@ function requestTrust(health) {
   }
   location.href = health.trust_url
 }</code></pre>
-        </div>
-      </details>
+      </div>
     </section>
-
-    <div class="notes">
-      <h2>接入要点</h2>
-      <ul>
-        <li>所有组件都依赖 <code>discoverHelper()</code> 探测端口段 9527–9536。<strong>必须以 health 返回的 service === "capcut_helper" 为准</strong>，不要假设某个端口就是 helper（可能撞到本机别的服务）。</li>
-        <li><code>cors_allowed === false</code> 时一定要给用户明确指引，<strong>不要等业务接口报 Failed to fetch 才反应</strong>。指引文案可以直接用 <code>health.hint</code>。</li>
-        <li>点击 <code>trust_url</code> 浏览器会先弹一个系统级「是否打开 capcut-helper」确认框，用户点允许后才会拉起 helper 桌面应用并弹授权 Modal。<strong>这是浏览器安全模型，不可绕过</strong>，文案要让用户预期到这个跳转。</li>
-        <li>用户在 helper 里点「允许」后，CORS 白名单是<strong>热生效</strong>的（不需要重启 helper）。所以「允许接入」按钮后面紧跟一个「我已授权，重试」按钮就足够，无需提示「请重启应用」。</li>
-        <li>所有组件的视觉风格（颜色、圆角、间距）都通过页面顶部的 CSS 变量（<code>:root</code>）控制，按你自己的设计系统改即可。暗色模式自动适配。</li>
-        <li>更详细的字段说明与边界情况见 <a href="./CALLER_GUIDE.md">CALLER_GUIDE.md</a>。</li>
-      </ul>
-    </div>
   </div>
 
   <!-- ============ runtime ============ -->
   <script>
+    // ============================================================
+    // 通用：tab 切换
+    // ============================================================
+    document.querySelectorAll('.tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach((b) => b.classList.remove('active'))
+        document.querySelectorAll('.tab-content').forEach((t) => (t.hidden = true))
+        btn.classList.add('active')
+        document.getElementById(`tab-${btn.dataset.tab}`).hidden = false
+      })
+    })
+
+    // ============================================================
+    // 组件渲染：通用函数。state 形如：
+    //   { type: 'scan' }              → 探测中
+    //   { type: 'offline' }           → 找不到 helper
+    //   { type: 'health', health }    → 拿到 health 响应，按其内容渲染
+    // 同一渲染函数同时被「状态画廊」和「真实演示」复用，避免两份漂移。
+    // ============================================================
+
+    function renderBadgeInto(host, state, opts = {}) {
+      host.innerHTML = ''
+      const el = document.createElement('div')
+      el.className = 'ch-badge'
+      el.innerHTML = '<span class="dot"></span><span class="text"></span>'
+      const text = el.querySelector('.text')
+
+      if (state.type === 'scan') {
+        el.dataset.state = 'scan'
+        text.textContent = '探测中'
+      } else if (state.type === 'offline') {
+        el.dataset.state = 'err'
+        text.textContent = '剪映助手未运行'
+      } else if (state.health.cors_allowed === false) {
+        el.dataset.state = 'warn'
+        text.textContent = '需要授权'
+        if (opts.clickable !== false) {
+          el.classList.add('clickable')
+          el.title = '点击唤起剪映助手授权'
+          el.onclick = opts.onTrustClick || (() => alert('demo：实际部署会跳转 ' + state.health.trust_url))
+        }
+      } else {
+        el.dataset.state = 'ok'
+        text.textContent = '已连接 v' + state.health.version
+      }
+      host.appendChild(el)
+    }
+
+    function renderCardInto(host, state, opts = {}) {
+      host.innerHTML = `
+        <div class="ch-card">
+          <div class="head">
+            <span class="title">剪映助手</span>
+            <span class="pill"></span>
+          </div>
+          <div class="body"></div>
+          <div class="actions"></div>
+        </div>`
+      const root = host.querySelector('.ch-card')
+      const pill = root.querySelector('.pill')
+      const body = root.querySelector('.body')
+      const actions = root.querySelector('.actions')
+
+      if (state.type === 'scan') {
+        pill.dataset.state = 'scan'
+        pill.textContent = '探测中'
+        body.innerHTML = '正在扫描本地端口...'
+      } else if (state.type === 'offline') {
+        pill.dataset.state = 'err'
+        pill.textContent = '离线'
+        body.innerHTML = '未在端口 9527–9536 找到剪映助手。'
+        actions.innerHTML = `<button class="btn" onclick="${opts.retryFn || ''}">重新探测</button>`
+      } else {
+        const h = state.health
+        if (h.cors_allowed === false) {
+          pill.dataset.state = 'warn'
+          pill.textContent = '需要授权'
+          body.innerHTML = `当前页面 <code>${h.your_origin || '(无 origin)'}</code> 未被信任，点下方按钮唤起授权。`
+          actions.innerHTML = `
+            <button class="btn primary" onclick="${opts.trustFn || `alert('demo：实际部署会跳转 ${h.trust_url}')`}">允许接入</button>
+            <button class="btn" onclick="${opts.retryFn || ''}">我已授权，重试</button>`
+        } else {
+          pill.dataset.state = 'ok'
+          pill.textContent = '已连接'
+          body.innerHTML = `<span class="strong">v${h.version}</span> · 端口 ${h.port}`
+        }
+        if (h.has_update) {
+          const hint = document.createElement('div')
+          hint.className = 'update-hint'
+          hint.innerHTML = `🎉 新版 v${h.latest_version} 可用`
+          root.appendChild(hint)
+        }
+      }
+    }
+
+    function renderInlineInto(host, state, opts = {}) {
+      host.innerHTML = `
+        <button class="ch-inline">
+          <span class="icon"></span><span class="text"></span>
+        </button>`
+      const btn = host.querySelector('.ch-inline')
+      const icon = btn.querySelector('.icon')
+      const text = btn.querySelector('.text')
+
+      if (state.type === 'scan') {
+        btn.dataset.state = 'scan'
+        icon.textContent = '⏳'
+        text.textContent = '探测中'
+      } else if (state.type === 'offline') {
+        btn.dataset.state = 'err'
+        icon.textContent = '⚠'
+        text.textContent = '剪映助手未运行 · 点击重试'
+        btn.onclick = opts.retryFn || (() => {})
+      } else if (state.health.cors_allowed === false) {
+        btn.dataset.state = 'warn'
+        icon.textContent = '🔓'
+        text.textContent = '点击授权剪映助手'
+        btn.onclick = opts.onTrustClick || (() => alert('demo：实际部署会跳转 ' + state.health.trust_url))
+      } else {
+        btn.dataset.state = 'ok'
+        icon.textContent = '✓'
+        text.textContent = `剪映助手已连接 v${state.health.version}`
+      }
+    }
+
+    /**
+     * Wizard 接收一个 stepStates 数组：
+     *   [{key, title, meta, status}, ...]  status ∈ pending|active|done|failed
+     * 以及可选 action HTML（底部按钮区）。
+     */
+    function renderWizardInto(host, { stepStates, actionHTML = '' }) {
+      const items = stepStates.map(s => `
+        <li data-status="${s.status}" data-step="${s.key}">
+          <span class="step-num">${s.num}</span>
+          <div class="step-body">
+            <div class="step-title">${s.title}</div>
+            <div class="step-meta">${s.meta || ''}</div>
+          </div>
+        </li>
+      `).join('')
+      host.innerHTML = `
+        <div class="ch-wizard">
+          <h3>接入剪映助手</h3>
+          <p class="sub">按以下步骤完成连接。</p>
+          <ol class="steps">${items}</ol>
+          <div class="wizard-action">${actionHTML}</div>
+        </div>`
+    }
+
+    // ============================================================
+    // PART 1: 状态画廊 — 用 fixture 数据驱动渲染各组件 × 各状态
+    // ============================================================
+
+    function makeFakeHealth(overrides = {}) {
+      return {
+        service: 'capcut_helper',
+        version: '0.1.8',
+        port: 9527,
+        last_draft_request_at: null,
+        your_origin: 'https://your-app.com',
+        cors_allowed: true,
+        hint: null,
+        scheme: 'capcut-helper',
+        trust_url: null,
+        latest_version: '0.1.8',
+        has_update: false,
+        release_url: null,
+        ...overrides,
+      }
+    }
+
+    const states = {
+      scan: { tag: '探测中', tone: 'scan', state: { type: 'scan' } },
+      offline: { tag: '离线 / 未安装', tone: 'err', state: { type: 'offline' } },
+      ok: {
+        tag: '已连接', tone: 'ok',
+        state: { type: 'health', health: makeFakeHealth() },
+      },
+      okUpdate: {
+        tag: '已连接 · 有更新', tone: 'ok',
+        state: { type: 'health', health: makeFakeHealth({
+          has_update: true,
+          latest_version: '0.2.0',
+          release_url: 'https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0',
+        }) },
+      },
+      needAuth: {
+        tag: '需要授权', tone: 'warn',
+        state: { type: 'health', health: makeFakeHealth({
+          cors_allowed: false,
+          your_origin: 'https://your-app.com',
+          hint: '当前域名未在 CORS 白名单中',
+          trust_url: 'capcut-helper://trust?origin=https%3A%2F%2Fyour-app.com',
+        }) },
+      },
+    }
+
+    function buildGallery(hostId, renderFn, stateKeys) {
+      const host = document.getElementById(hostId)
+      stateKeys.forEach((key) => {
+        const { tag, tone, state } = states[key]
+        const cell = document.createElement('div')
+        cell.className = 'state-cell'
+        cell.innerHTML = `
+          <div class="state-tag" data-tone="${tone}">${tag}</div>
+          <div class="preview"></div>`
+        host.appendChild(cell)
+        renderFn(cell.querySelector('.preview'), state)
+      })
+    }
+
+    // 渲染各组件状态画廊
+    const basicStates = ['scan', 'ok', 'okUpdate', 'needAuth', 'offline']
+    buildGallery('gallery-badge', renderBadgeInto, basicStates)
+    buildGallery('gallery-card', renderCardInto, basicStates)
+    buildGallery('gallery-inline', renderInlineInto, basicStates)
+
+    // 向导：用一组预设状态展示不同推进阶段
+    const wizardScenarios = [
+      {
+        tag: '初始 / 探测中', tone: 'scan',
+        stepStates: [
+          { num: 1, key: 'discover', status: 'active', title: '发现本地服务', meta: '扫描端口 9527–9536' },
+          { num: 2, key: 'cors', status: 'pending', title: '检查跨域授权', meta: '确认本页面在白名单' },
+          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
+        ],
+      },
+      {
+        tag: '发现失败 / 离线', tone: 'err',
+        stepStates: [
+          { num: 1, key: 'discover', status: 'failed', title: '发现本地服务', meta: '端口段全部无响应' },
+          { num: 2, key: 'cors', status: 'pending', title: '检查跨域授权', meta: '确认本页面在白名单' },
+          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
+        ],
+        actionHTML: `<button class="btn primary">重新探测</button>`,
+      },
+      {
+        tag: '需要授权', tone: 'warn',
+        stepStates: [
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.8' },
+          { num: 2, key: 'cors', status: 'failed', title: '检查跨域授权', meta: '当前 origin <code>https://your-app.com</code> 不在白名单' },
+          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
+        ],
+        actionHTML: `
+          <button class="btn primary">允许接入</button>
+          <button class="btn">我已授权，重试</button>`,
+      },
+      {
+        tag: '全部就绪', tone: 'ok',
+        stepStates: [
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.8' },
+          { num: 2, key: 'cors', status: 'done', title: '检查跨域授权', meta: '已授权' },
+          { num: 3, key: 'done', status: 'done', title: '就绪', meta: '可以调用 /api/v1/drafts' },
+        ],
+      },
+    ]
+
+    {
+      const host = document.getElementById('gallery-wizard')
+      wizardScenarios.forEach((scn) => {
+        const cell = document.createElement('div')
+        cell.className = 'state-cell wide'
+        cell.innerHTML = `
+          <div class="state-tag" data-tone="${scn.tone}">${scn.tag}</div>
+          <div class="preview"></div>`
+        host.appendChild(cell)
+        renderWizardInto(cell.querySelector('.preview'), {
+          stepStates: scn.stepStates,
+          actionHTML: scn.actionHTML || '',
+        })
+      })
+    }
+
+    // ============================================================
+    // PART 2: 真实端到端演示
+    // ============================================================
+
     const HELPER_PORT_KEY = 'capcut_helper_port'
     const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
+    const SAMPLE_VIDEO_URL = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4'
+
+    // 整个 live flow 的状态
+    const live = {
+      port: null,
+      health: null,
+      taskId: null,
+      pollHandle: null,
+    }
+
+    function setStepStatus(id, status) {
+      document.getElementById(id).dataset.status = status
+    }
+
+    function showResult(id, content, cls = '') {
+      const el = document.getElementById(id)
+      el.hidden = false
+      el.className = 'result-box' + (cls ? ' ' + cls : '')
+      el.textContent = content
+    }
+
+    function defaultDraftName() {
+      const d = new Date()
+      const pad = (n) => String(n).padStart(2, '0')
+      return `demo-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+    }
+
+    function defaultSpec() {
+      return {
+        draft_name: defaultDraftName(),
+        canvas: { width: 1920, height: 1080, fps: 30 },
+        tracks: [{
+          type: 'video',
+          segments: [{
+            material: { url: SAMPLE_VIDEO_URL, type: 'video', filename: 'demo.mp4' },
+            timeline: { start: 0, duration: 10_000_000 },
+          }],
+        }],
+      }
+    }
+
+    function resetSpec() {
+      document.getElementById('input-draft-name').value = defaultDraftName()
+      document.getElementById('input-spec').value = JSON.stringify(defaultSpec(), null, 2)
+    }
+
+    // 初始化第三步表单
+    resetSpec()
 
     async function discoverHelper({ timeoutMs = 500 } = {}) {
       const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
@@ -803,187 +1117,174 @@ function requestTrust(health) {
             localStorage.setItem(HELPER_PORT_KEY, String(port))
             return { port, health }
           }
-        } catch { /* 继续下一个 */ }
+        } catch { /* 继续 */ }
       }
       return null
     }
 
-    function setGlobalInfo(text) {
-      document.getElementById('globalInfo').textContent = text
+    async function fetchHealth(port) {
+      const resp = await fetch(`http://localhost:${port}/api/v1/health`)
+      return (await resp.json()).data
     }
 
-    // ========= 组件 1：badge =========
-    function renderBadge(result) {
-      const host = document.getElementById('badgePreview')
-      host.innerHTML = ''
-      const el = document.createElement('div')
-      el.className = 'ch-badge'
-      const dot = document.createElement('span'); dot.className = 'dot'
-      const text = document.createElement('span'); text.className = 'text'
-      el.append(dot, text)
-      host.appendChild(el)
-
-      if (!result) {
-        el.dataset.state = 'err'; text.textContent = '剪映助手未运行'
-      } else if (result.health.cors_allowed === false) {
-        el.dataset.state = 'warn'; text.textContent = '需要授权'
-        el.classList.add('clickable')
-        el.onclick = () => alert('demo：实际部署时点击会跳转 ' + result.health.trust_url)
-      } else {
-        el.dataset.state = 'ok'; text.textContent = '已连接 v' + result.health.version
-      }
-    }
-
-    // ========= 组件 2：card =========
-    function renderCard(result) {
-      const host = document.getElementById('cardPreview')
-      host.innerHTML = `
-        <div class="ch-card">
-          <div class="head">
-            <span class="title">剪映助手</span>
-            <span class="pill"></span>
-          </div>
-          <div class="body"></div>
-          <div class="actions"></div>
-        </div>`
-      const root = host.querySelector('.ch-card')
-      const pill = root.querySelector('.pill')
-      const body = root.querySelector('.body')
-      const actions = root.querySelector('.actions')
-
-      if (!result) {
-        pill.dataset.state = 'err'; pill.textContent = '离线'
-        body.innerHTML = '未在端口 9527–9536 找到剪映助手。请先启动桌面应用。'
-        actions.innerHTML = `<button class="btn" onclick="rescan()">重新探测</button>`
-        return
-      }
-      const h = result.health
-      if (h.cors_allowed === false) {
-        pill.dataset.state = 'warn'; pill.textContent = '需要授权'
-        body.innerHTML = `当前页面 <code>${h.your_origin || '(无 origin)'}</code> 还未被剪映助手信任，点下方按钮唤起授权弹窗。`
-        actions.innerHTML = `
-          <button class="btn primary" onclick="alert('demo：实际部署会跳转 ${h.trust_url}')">允许接入</button>
-          <button class="btn" onclick="rescan()">我已授权，重试</button>`
-      } else {
-        pill.dataset.state = 'ok'; pill.textContent = '已连接'
-        body.innerHTML = `<span class="strong">v${h.version}</span> · 端口 ${h.port}`
-        actions.innerHTML = ''
-      }
-      if (h.has_update) {
-        const hint = document.createElement('div')
-        hint.className = 'update-hint'
-        hint.innerHTML = `🎉 新版 v${h.latest_version} 可用 · <a onclick="window.open('${h.release_url}','_blank')">查看更新</a>`
-        root.appendChild(hint)
-      }
-    }
-
-    // ========= 组件 3：inline =========
-    function renderInline(result) {
-      const btn = document.getElementById('inlinePreview')
-      const icon = btn.querySelector('.icon')
-      const text = btn.querySelector('.text')
-      btn.onclick = null
-
-      if (!result) {
-        btn.dataset.state = 'err'; icon.textContent = '⚠'; text.textContent = '剪映助手未运行 · 点击重试'
-        btn.onclick = rescan
-      } else if (result.health.cors_allowed === false) {
-        btn.dataset.state = 'warn'; icon.textContent = '🔓'; text.textContent = '点击授权剪映助手'
-        btn.onclick = () => alert('demo：实际部署会跳转 ' + result.health.trust_url)
-      } else {
-        btn.dataset.state = 'ok'; icon.textContent = '✓'; text.textContent = `剪映助手已连接 v${result.health.version}`
-      }
-    }
-
-    // ========= 组件 4：wizard =========
-    function renderWizard(result) {
-      const host = document.getElementById('wizardPreview')
-      host.innerHTML = `
-        <div class="ch-wizard">
-          <h3>接入剪映助手</h3>
-          <p class="sub">按以下步骤完成连接，之后即可一键导出到剪映草稿。</p>
-          <ol class="steps">
-            <li data-status="pending" data-step="discover">
-              <span class="step-num">1</span>
-              <div class="step-body">
-                <div class="step-title">发现本地服务</div>
-                <div class="step-meta">扫描端口 9527–9536</div>
-              </div>
-            </li>
-            <li data-status="pending" data-step="cors">
-              <span class="step-num">2</span>
-              <div class="step-body">
-                <div class="step-title">检查跨域授权</div>
-                <div class="step-meta">确认本页面在白名单</div>
-              </div>
-            </li>
-            <li data-status="pending" data-step="done">
-              <span class="step-num">3</span>
-              <div class="step-body">
-                <div class="step-title">就绪</div>
-                <div class="step-meta">可以调用业务接口</div>
-              </div>
-            </li>
-          </ol>
-          <div class="wizard-action"></div>
-        </div>`
-      const root = host.querySelector('.ch-wizard')
-      const setStep = (key, status, meta) => {
-        const li = root.querySelector(`li[data-step="${key}"]`)
-        li.dataset.status = status
-        if (meta) li.querySelector('.step-meta').innerHTML = meta
-      }
-      const setAction = (html) => { root.querySelector('.wizard-action').innerHTML = html }
-
-      if (!result) {
-        setStep('discover', 'failed', '端口段全部无响应')
-        setAction(`<button class="btn primary" onclick="rescan()">重新探测</button>`)
-        return
-      }
-      setStep('discover', 'done', `端口 ${result.port} · v${result.health.version}`)
-      const h = result.health
-      if (h.cors_allowed === false) {
-        setStep('cors', 'failed', `当前 origin <code>${h.your_origin || '(无)'}</code> 不在白名单`)
-        setAction(`
-          <button class="btn primary" onclick="alert('demo：实际部署会跳转 ${h.trust_url}')">允许接入</button>
-          <button class="btn" onclick="rescan()">我已授权，重试</button>`)
-        return
-      }
-      setStep('cors', 'done', '已授权')
-      setStep('done', 'done', '可以调用 /api/v1/drafts')
-    }
-
-    // ========= 重新探测：刷新所有组件 =========
-    async function rescan() {
-      setGlobalInfo('探测中...')
-      ;['badgePreview', 'cardPreview', 'wizardPreview'].forEach((id) => {
-        const host = document.getElementById(id); if (host) host.innerHTML = ''
-      })
-      const inlineBtn = document.getElementById('inlinePreview')
-      inlineBtn.dataset.state = 'scan'
-      inlineBtn.querySelector('.icon').textContent = '⏳'
-      inlineBtn.querySelector('.text').textContent = '探测中'
+    // ===== 步骤 1：发现 =====
+    async function runDiscover() {
+      setStepStatus('step-discover', 'active')
+      showResult('discover-result', '正在扫描端口段 9527–9536...')
 
       const result = await discoverHelper()
       if (!result) {
-        setGlobalInfo('未找到 capcut_helper（端口段 9527–9536 全部无响应）')
-      } else {
-        const h = result.health
-        const tags = []
-        tags.push(`port=${result.port}`)
-        tags.push(`v${h.version}`)
-        tags.push(h.cors_allowed === null ? 'cors=null' : `cors_allowed=${h.cors_allowed}`)
-        if (h.has_update) tags.push(`新版 v${h.latest_version}`)
-        setGlobalInfo(tags.join(' · '))
+        setStepStatus('step-discover', 'failed')
+        showResult('discover-result', '❌ 端口段全部无响应。请确认 capcut_helper 桌面应用已启动。', 'err')
+        return
       }
-      renderBadge(result)
-      renderCard(result)
-      renderInline(result)
-      renderWizard(result)
+      live.port = result.port
+      live.health = result.health
+      setStepStatus('step-discover', 'done')
+      showResult('discover-result',
+        `✓ 找到 capcut_helper\n  端口: ${result.port}\n  版本: v${result.health.version}`, 'ok')
+      runCheck()
     }
 
-    // ========= 复制按钮 =========
-    document.querySelectorAll('.copy').forEach((btn) => {
+    // ===== 步骤 2：CORS 自检 =====
+    function runCheck() {
+      setStepStatus('step-check', 'active')
+      const h = live.health
+      showResult('check-result', JSON.stringify(h, null, 2))
+
+      const actions = document.getElementById('check-actions')
+      actions.innerHTML = ''
+
+      if (h.cors_allowed === false) {
+        setStepStatus('step-check', 'failed')
+        const trustBtn = document.createElement('button')
+        trustBtn.className = 'btn warn'
+        trustBtn.textContent = '🔓 允许接入（唤起剪映助手）'
+        trustBtn.onclick = () => { window.location.href = h.trust_url }
+        actions.appendChild(trustBtn)
+
+        const retryBtn = document.createElement('button')
+        retryBtn.className = 'btn'
+        retryBtn.textContent = '我已授权，重试'
+        retryBtn.onclick = async () => {
+          live.health = await fetchHealth(live.port)
+          runCheck()
+        }
+        actions.appendChild(retryBtn)
+        return
+      }
+
+      setStepStatus('step-check', 'done')
+      // 进入步骤 3
+      setStepStatus('step-spec', 'active')
+      setStepStatus('step-submit', 'active')
+    }
+
+    // ===== 步骤 4：提交草稿 =====
+    async function runSubmit() {
+      const draftName = document.getElementById('input-draft-name').value.trim()
+      const specText = document.getElementById('input-spec').value
+      let spec
+      try {
+        spec = JSON.parse(specText)
+      } catch (e) {
+        showResult('submit-result', '❌ 时间线 JSON 解析失败：' + e.message, 'err')
+        return
+      }
+      if (draftName) spec.draft_name = draftName
+
+      document.getElementById('btn-submit').disabled = true
+      setStepStatus('step-submit', 'active')
+      showResult('submit-result', '正在 POST /api/v1/drafts ...')
+
+      try {
+        const resp = await fetch(`http://localhost:${live.port}/api/v1/drafts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(spec),
+        })
+        const body = await resp.json()
+        if (body.code !== 0) {
+          setStepStatus('step-submit', 'failed')
+          showResult('submit-result',
+            `❌ 提交失败 (code=${body.code}): ${body.message}\n` +
+            JSON.stringify(body.data, null, 2), 'err')
+          document.getElementById('btn-submit').disabled = false
+          return
+        }
+        live.taskId = body.data.task_id
+        setStepStatus('step-submit', 'done')
+        showResult('submit-result',
+          `✓ 已提交\n  task_id: ${body.data.task_id}\n  draft_name: ${spec.draft_name}`, 'ok')
+        runPoll()
+      } catch (err) {
+        setStepStatus('step-submit', 'failed')
+        showResult('submit-result', '❌ 请求异常: ' + err.message, 'err')
+        document.getElementById('btn-submit').disabled = false
+      }
+    }
+
+    // ===== 步骤 5：轮询任务 =====
+    async function runPoll() {
+      setStepStatus('step-poll', 'active')
+      const statusEl = document.getElementById('poll-status')
+      const progressBar = document.getElementById('poll-progress')
+      const progressInner = progressBar.querySelector('div')
+      const resultEl = document.getElementById('poll-result')
+
+      progressBar.hidden = false
+      resultEl.hidden = false
+
+      const tick = async () => {
+        try {
+          const resp = await fetch(`http://localhost:${live.port}/api/v1/tasks/${live.taskId}`)
+          const body = await resp.json()
+          if (body.code !== 0) {
+            statusEl.textContent = `查询失败 (code=${body.code}): ${body.message}`
+            setStepStatus('step-poll', 'failed')
+            return
+          }
+          const d = body.data
+          statusEl.textContent = `status=${d.status} · progress=${d.progress}%`
+          progressInner.style.width = `${d.progress}%`
+          resultEl.textContent = JSON.stringify(d, null, 2)
+
+          if (d.status === 'done') {
+            progressBar.className = 'progress-bar ok'
+            setStepStatus('step-poll', 'done')
+            runDone(d)
+            return
+          }
+          if (d.status === 'failed') {
+            progressBar.className = 'progress-bar err'
+            setStepStatus('step-poll', 'failed')
+            resultEl.className = 'result-box err'
+            return
+          }
+          live.pollHandle = setTimeout(tick, 1500)
+        } catch (err) {
+          statusEl.textContent = '查询异常: ' + err.message
+          setStepStatus('step-poll', 'failed')
+        }
+      }
+      tick()
+    }
+
+    // ===== 步骤 6：完成 =====
+    function runDone(taskData) {
+      setStepStatus('step-done', 'done')
+      showResult('done-result',
+        `🎉 草稿已创建\n\n` +
+        `草稿路径：${taskData.result}\n\n` +
+        `下一步：打开剪映 → 草稿列表 → 找到「${(JSON.parse(document.getElementById('input-spec').value).draft_name) || '...'}」`,
+        'ok')
+      document.getElementById('btn-submit').disabled = false
+    }
+
+    // ============================================================
+    // 复制按钮
+    // ============================================================
+    document.querySelectorAll('.shared-source .copy').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const target = document.getElementById(btn.dataset.target)
         if (!target) return
@@ -998,8 +1299,6 @@ function requestTrust(health) {
         }
       })
     })
-
-    rescan()
   </script>
 </body>
 </html>
