@@ -1,4 +1,7 @@
+import asyncio
+import logging
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,6 +13,9 @@ from app.core.config import load_config
 from app.core.cors import HotReloadCORSMiddleware
 from app.core.exceptions import register_exception_handlers
 from app.core.request_snapshot import install_request_snapshot
+from app.services.update_checker import check_for_update
+
+logger = logging.getLogger(__name__)
 
 
 def _resource_path(rel: str) -> Path:
@@ -27,11 +33,30 @@ def _resource_path(rel: str) -> Path:
 _FRONTEND_DIST = _resource_path("frontend/dist")
 
 
+async def _refresh_update_info(app: FastAPI) -> None:
+    """启动后台异步刷新 app.state.update_info，让 health 接口能附带最新版本信息。
+    任何异常都吞掉，update_info 维持上次值（首次失败则保持 None）。"""
+    try:
+        info = await check_for_update(app.state.version)
+        app.state.update_info = info
+    except Exception:  # noqa: BLE001 — 网络/解析失败不影响主流程
+        logger.exception("启动时刷新 update_info 失败，health 将返回 latest_version=null")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """uvicorn 启动后 fire-and-forget 查一次更新，结果给 health 用。
+    不阻塞 startup —— 首次请求若早于查更新完成，health 的 latest_version 为 null。"""
+    asyncio.create_task(_refresh_update_info(app))
+    yield
+
+
 def create_app(port: int) -> FastAPI:
-    app = FastAPI(title="capcut_helper")
+    app = FastAPI(title="capcut_helper", lifespan=lifespan)
     app.state.port = port
     app.state.version = __version__
     app.state.last_draft_request_at = None
+    app.state.update_info = None  # 由 lifespan 异步填充
 
     # add_middleware 是 LIFO：越晚 add 越靠外层。
     # 先 add snapshot 让它在内层 → CORS preflight（OPTIONS）被中间件直接 400

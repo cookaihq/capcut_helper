@@ -94,7 +94,12 @@ function range(a, b) { return Array.from({ length: b - a + 1 }, (_, i) => a + i)
   "last_draft_request_at": 1715760000.0,
   "your_origin": "https://example.com",
   "cors_allowed": false,
-  "hint": "当前域名 https://example.com 未在 CORS 白名单中，业务接口会被浏览器拦截。请打开剪映助手 → 设置 → CORS 白名单，添加该域名后保存（无需重启）。"
+  "hint": "当前域名 https://example.com 未在 CORS 白名单中，业务接口会被浏览器拦截。请打开剪映助手 → 设置 → CORS 白名单，添加该域名后保存（无需重启）；或在调用方页面引导用户点击 trust_url 一键唤起剪映助手授权。",
+  "scheme": "capcut-helper",
+  "trust_url": "capcut-helper://trust?origin=https%3A%2F%2Fexample.com",
+  "latest_version": "0.1.8",
+  "has_update": true,
+  "release_url": "https://github.com/cookaihq/capcut_helper/releases/tag/v0.1.8"
 }
 ```
 
@@ -109,8 +114,26 @@ function range(a, b) { return Array.from({ length: b - a + 1 }, (_, i) => a + i)
 | `your_origin` | 服务端从请求头读到的 `Origin`；非浏览器调用（curl / 服务端 HTTP）时为 `null` |
 | `cors_allowed` | 当前 `your_origin` 是否在白名单内：`true` 表示放行业务接口；`false` 表示业务接口跨域会被拦；`null` 表示请求没带 `Origin`（CORS 不适用） |
 | `hint` | 仅在 `cors_allowed: false` 时给出的人类可读指引文案；其他情况为 `null` |
+| `scheme` | URL Scheme 名，固定 `"capcut-helper"`。调用方需要自己拼链接时可用 |
+| `trust_url` | 仅在 `cors_allowed: false` 且 `your_origin` 存在时输出的「一键授权」链接（详见 §10）；其他情况为 `null` |
+| `latest_version` | 从 GitHub Releases 查到的最新版本号；启动后异步刷新，未完成或网络失败时为 `null` |
+| `has_update` | `true` 表示 `latest_version > version`；`false` 表示已是最新或无法判断（latest_version 为 null 时也返回 false） |
+| `release_url` | 最新版本的 GitHub Release 页面 URL；未刷新时为 `null`。调用方可以在自己的页面引导用户点链接查看更新 |
 
 **关于 `version` 的使用建议**：如果你的程序对 helper 有最低版本要求（例如依赖新增的字段、新增的轨道类型），请用 `data.version` 自己做版本比较（`packaging.version` / `semver` 等库），低于最低版本时提示用户去 GitHub Releases 升级 helper。capcut_helper 自身也会在启动时向 GitHub 检查更新并提示用户，但调用方**不应依赖这一点**——调用方要主动检查并做自己的兼容性判断。
+
+**关于 `has_update` 的使用建议**：这是 helper 启动时自己查 GitHub 缓存下来的结果，调用方可以**复用**它给用户做个"helper 有新版"的轻提示，而不用自己也发一次 GitHub 请求。例如：
+
+```js
+if (data.has_update) {
+  showInlineHint(`剪映助手有新版本 v${data.latest_version}`, {
+    actionText: '查看更新',
+    onAction: () => window.open(data.release_url, '_blank'),
+  })
+}
+```
+
+注意：`has_update` 只反映 helper 自身的版本状态，**和你自己程序对 helper 的最低版本要求无关**——后者要按上一段的方式用 `data.version` 单独判断。
 
 **推荐的调用方自检流程**（在 §3 端口发现成功之后）：
 
