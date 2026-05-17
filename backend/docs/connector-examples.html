@@ -186,6 +186,7 @@
     .state-cell .state-tag[data-tone="warn"]::before { background: var(--warn); }
     .state-cell .state-tag[data-tone="err"]::before { background: var(--err); }
     .state-cell .state-tag[data-tone="scan"]::before { background: var(--accent); }
+    .state-cell .state-tag[data-tone="running"]::before { background: var(--accent); }
     .state-cell .preview {
       flex: 1;
       display: flex;
@@ -343,6 +344,54 @@
     .progress-bar.ok > div { background: var(--ok); }
     .progress-bar.err > div { background: var(--err); }
 
+    /* 真实演示步骤 5 中的子任务列表 */
+    .subtask-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .subtask-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--surface-2);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .subtask-row .name {
+      flex: 1;
+      font-family: var(--mono);
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subtask-row .meta {
+      color: var(--text-muted);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .subtask-row .mini-bar {
+      width: 80px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .subtask-row .mini-bar > div {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .subtask-row[data-status="done"] .mini-bar > div { background: var(--ok); }
+    .subtask-row[data-status="failed"] .mini-bar > div { background: var(--err); }
+    .subtask-row[data-status="pending"] .mini-bar > div { background: var(--text-faint); }
+
     /* ===== 共享底层 ===== */
     .shared-source {
       margin-top: 56px;
@@ -380,6 +429,7 @@
 
     /* ===== 组件 1：极简徽章 ===== */
     .ch-badge {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -409,15 +459,29 @@
     .ch-badge[data-state="warn"] .dot { background: var(--warn); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
     .ch-badge[data-state="err"] .dot { background: var(--err); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
     .ch-badge[data-state="scan"] .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+    .ch-badge[data-state="running"] .dot { background: var(--accent); animation: pulse 1.2s infinite; }
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(94, 106, 210, 0.4); }
       50% { box-shadow: 0 0 0 6px rgba(94, 106, 210, 0); }
+    }
+    /* 「有新版本」小角标：右上角红点（同时显示已连接 dot + 更新角标） */
+    .ch-badge.has-update::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--err);
+      border: 2px solid var(--surface);
+      box-sizing: content-box;
     }
 
     /* ===== 组件 2：状态卡片 ===== */
     .ch-card {
       width: 100%;
-      max-width: 320px;
+      max-width: 340px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -441,6 +505,7 @@
     .ch-card .head .pill[data-state="warn"] { background: var(--warn-fade); color: var(--warn); }
     .ch-card .head .pill[data-state="err"] { background: var(--err-fade); color: var(--err); }
     .ch-card .head .pill[data-state="scan"] { background: var(--accent-fade); color: var(--accent); }
+    .ch-card .head .pill[data-state="running"] { background: var(--accent-fade); color: var(--accent); }
     .ch-card .body { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
     .ch-card .body .strong { color: var(--text); font-weight: 500; }
     .ch-card .body code {
@@ -459,9 +524,54 @@
       font-size: 11px;
       color: var(--accent);
     }
+    /* card 在运行中状态：进度条 + mini 子任务列表 */
+    .ch-card .task-progress {
+      margin: 8px 0 4px;
+      height: 4px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .ch-card .task-progress > div {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    .ch-card .mini-subtasks {
+      margin: 8px 0 0;
+      list-style: none;
+      padding: 0;
+      font-size: 11px;
+    }
+    .ch-card .mini-subtasks li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      color: var(--text-muted);
+    }
+    .ch-card .mini-subtasks .mark {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text-faint);
+      flex-shrink: 0;
+    }
+    .ch-card .mini-subtasks li[data-status="done"] .mark { background: var(--ok); }
+    .ch-card .mini-subtasks li[data-status="downloading"] .mark { background: var(--accent); animation: pulse 1.2s infinite; }
+    .ch-card .mini-subtasks li[data-status="failed"] .mark { background: var(--err); }
+    .ch-card .mini-subtasks .name {
+      flex: 1;
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ch-card .mini-subtasks .pct { flex-shrink: 0; }
 
     /* ===== 组件 3：内嵌按钮 ===== */
     .ch-inline {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -474,6 +584,7 @@
       font-family: inherit;
       max-width: 100%;
       white-space: nowrap;
+      overflow: hidden;
     }
     .ch-inline[data-state="ok"] {
       background: var(--ok-fade);
@@ -499,7 +610,28 @@
       border-color: var(--border-strong);
       cursor: wait;
     }
-    .ch-inline .icon { font-size: 14px; line-height: 1; }
+    /* 运行中：背景用 linear-gradient 模拟进度填充（accent-fade 已填 / 白色未填） */
+    .ch-inline[data-state="running"] {
+      background: var(--surface);
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+      cursor: default;
+    }
+    .ch-inline .icon { font-size: 14px; line-height: 1; position: relative; z-index: 1; }
+    .ch-inline .text { position: relative; z-index: 1; }
+    .ch-inline .progress-fill {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      background: var(--accent-fade);
+      transition: width 0.4s ease;
+      z-index: 0;
+    }
+    /* 已连接 + 有更新：右侧加 "· 有更新" */
+    .ch-inline .update-tag {
+      color: var(--err);
+      font-weight: 500;
+      margin-left: 4px;
+    }
 
     /* ===== 组件 4：完整向导 ===== */
     .ch-wizard {
@@ -552,6 +684,11 @@
     .ch-wizard ol.steps li[data-status="done"] .step-num { background: var(--ok); color: white; }
     .ch-wizard ol.steps li[data-status="active"] .step-num { background: var(--accent); color: white; }
     .ch-wizard ol.steps li[data-status="failed"] .step-num { background: var(--err); color: white; }
+    .ch-wizard ol.steps li[data-status="running"] .step-num {
+      background: var(--accent);
+      color: white;
+      animation: pulse 1.2s infinite;
+    }
     .ch-wizard .step-body { flex: 1; }
     .ch-wizard .step-title { font-weight: 500; color: var(--text); font-size: 12px; }
     .ch-wizard .step-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
@@ -561,6 +698,18 @@
       padding: 1px 4px;
       background: var(--surface-2);
       border-radius: 3px;
+    }
+    .ch-wizard .wizard-progress {
+      margin: 4px 0 6px;
+      height: 3px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .ch-wizard .wizard-progress > div {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.4s ease;
     }
     .ch-wizard .wizard-action {
       display: flex;
@@ -574,8 +723,8 @@
   <div class="page">
     <header class="hero">
       <h1>capcut_helper 连接组件示例</h1>
-      <p>第一部分看「组件状态画廊」（纯静态预览，不需要 helper 运行）<br />
-        第二部分跑「真实端到端演示」（需要 helper 真实运行 + 当前页面 origin 在白名单），完整走通 发现 → 自检 → 授权 → 创建草稿 → 任务轮询。</p>
+      <p>第一部分「组件状态画廊」用 fixture 数据驱动渲染各种状态（不需要 helper 运行）；<br />
+        第二部分「真实端到端演示」走真实流程：发现 → 自检 → 授权 → 提交草稿 → 用 SSE 订阅实时进度（含每个素材的字节进度）。</p>
     </header>
 
     <nav class="tabs" role="tablist">
@@ -586,34 +735,30 @@
     <!-- ============ PART 1: 状态画廊 ============ -->
     <section id="tab-gallery" class="tab-content" role="tabpanel">
       <div class="gallery-intro">
-        <strong>📑 状态画廊</strong>用 fixture 数据驱动渲染，<strong>不与 helper 通信</strong>。每个组件下方展示 4–5 种主要状态的视觉效果，复制 HTML/CSS 时可以一眼对照每种状态长什么样。
+        <strong>📑 状态画廊</strong>用 fixture 数据驱动渲染，<strong>不与 helper 通信</strong>。每个组件下方展示 6 种主要状态：探测中 / 已连接 / 已连接+有新版本 / 运行中（草稿生成中）/ 需要授权 / 离线。
       </div>
 
-      <!-- 组件 1：极简徽章 -->
       <div class="gallery-section">
         <h2>1. 极简徽章 / Badge</h2>
-        <p class="section-desc">小圆点 + 状态文字。适合放在调用方页面右上角不抢戏。</p>
+        <p class="section-desc">小圆点 + 状态文字。运行中显示「N/M · X%」简略进度；已连接+有更新时右上角加红点。</p>
         <div class="state-grid" id="gallery-badge"></div>
       </div>
 
-      <!-- 组件 2：状态卡片 -->
       <div class="gallery-section">
         <h2>2. 状态卡片 / Card</h2>
-        <p class="section-desc">完整信息展示 + 上下文 action 按钮。适合设置页或集成入口。</p>
+        <p class="section-desc">完整信息展示。运行中显示总进度条 + mini 子任务列表（每个素材一行带状态点）。</p>
         <div class="state-grid" id="gallery-card"></div>
       </div>
 
-      <!-- 组件 3：内嵌按钮 -->
       <div class="gallery-section">
         <h2>3. 内嵌按钮 / Inline</h2>
-        <p class="section-desc">单按钮形态，文案/颜色/点击行为随状态切换。适合工具栏。</p>
+        <p class="section-desc">单按钮形态。运行中用背景填充模拟进度条；有更新时尾部加「· 有更新」小红字。</p>
         <div class="state-grid" id="gallery-inline"></div>
       </div>
 
-      <!-- 组件 4：完整向导 -->
       <div class="gallery-section">
         <h2>4. 完整向导 / Wizard</h2>
-        <p class="section-desc">分步骤展示「发现 → 自检 → 授权 → 就绪」全流程。适合首次接入引导。</p>
+        <p class="section-desc">步骤式引导。运行中把「生成草稿」作为活跃步骤，下方显示进度条与子任务摘要。</p>
         <div class="state-grid" id="gallery-wizard"></div>
       </div>
     </section>
@@ -679,7 +824,7 @@
             <span class="step-num">4</span>
             <h3 class="step-title">提交草稿（POST /drafts）</h3>
           </div>
-          <p class="step-desc">把规格 POST 给 helper，立刻拿到一个 task_id。</p>
+          <p class="step-desc">把规格 POST 给 helper，立刻拿到 task_id 和 stream_url。</p>
           <div class="step-body">
             <div class="step-actions">
               <button class="btn primary" id="btn-submit" onclick="runSubmit()">提交</button>
@@ -688,16 +833,21 @@
           </div>
         </li>
 
-        <li class="live-step" data-status="pending" id="step-poll">
+        <li class="live-step" data-status="pending" id="step-stream">
           <div class="step-head">
             <span class="step-num">5</span>
-            <h3 class="step-title">轮询任务进度</h3>
+            <h3 class="step-title">SSE 订阅实时进度</h3>
           </div>
-          <p class="step-desc">每 1.5s 查一次 /tasks/{id}，实时显示 status / progress，直到 done 或 failed。</p>
+          <p class="step-desc">用 EventSource 订阅 stream_url，实时收到整体进度 + 每个素材子任务的字节进度。</p>
           <div class="step-body">
-            <div id="poll-status" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
-            <div class="progress-bar" id="poll-progress" hidden><div style="width: 0"></div></div>
-            <div class="result-box" id="poll-result" hidden></div>
+            <div id="stream-status" style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"></div>
+            <div class="progress-bar" id="stream-progress" hidden><div style="width: 0"></div></div>
+            <p class="field-label" style="margin-top: 12px;" id="subtask-header" hidden>素材下载进度</p>
+            <ul class="subtask-list" id="subtask-list"></ul>
+            <details style="margin-top: 12px;">
+              <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer;">原始 SSE 事件流</summary>
+              <div class="result-box" id="stream-events" style="margin-top: 6px;"></div>
+            </details>
           </div>
         </li>
 
@@ -713,25 +863,19 @@
         </li>
       </ol>
 
-      <!-- 共享底层源码 -->
       <div class="shared-source">
         <h2>共享底层工具函数</h2>
-        <p>上面所有组件都基于这两个函数（<code>discoverHelper</code> / <code>fetchHealth</code>）。
+        <p>所有组件依赖以下三个函数（<code>discoverHelper</code> / <code>fetchHealth</code> / <code>streamTask</code>）。
           放到你的项目里某个 utils 文件，按需 import。</p>
         <button class="copy" data-target="shared-code">复制</button>
         <pre id="shared-code"><code>const HELPER_PORT_KEY = 'capcut_helper_port'
 const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
 
-/**
- * 扫端口段找 capcut_helper 本地服务。命中后返回 { port, health }；全部失败返回 null。
- * 先尝试 localStorage 缓存的端口（如果有），失败再扫整段。
- */
 async function discoverHelper({ timeoutMs = 500 } = {}) {
   const cached = Number(localStorage.getItem(HELPER_PORT_KEY)) || null
   const candidates = cached
     ? [cached, ...HELPER_PORT_RANGE.filter((p) =&gt; p !== cached)]
     : HELPER_PORT_RANGE
-
   for (const port of candidates) {
     try {
       const resp = await fetch(`http://localhost:${port}/api/v1/health`, {
@@ -744,27 +888,30 @@ async function discoverHelper({ timeoutMs = 500 } = {}) {
         localStorage.setItem(HELPER_PORT_KEY, String(port))
         return { port, health }
       }
-    } catch { /* 端口无服务 / 超时 / 不是 capcut_helper，继续 */ }
+    } catch { /* 继续下一个 */ }
   }
   return null
 }
 
-/** 已知端口时直接拉 health（用于「我已授权重试」场景，跳过端口扫描）。 */
 async function fetchHealth(port) {
   const resp = await fetch(`http://localhost:${port}/api/v1/health`)
-  const body = await resp.json()
-  return body.data
+  return (await resp.json()).data
 }
 
 /**
- * 唤起剪映助手桌面应用弹出授权确认。注意：浏览器会先弹「是否打开 capcut-helper」
- * 系统确认框，用户点确认后才会拉起应用。trust_url 由 health 返回，origin 已正确编码。
+ * 订阅 SSE stream_url 拿任务实时进度。
+ * onProgress(task) 每次状态/字节进度变化触发；onDone(task) 任务结束（done/failed）触发；
+ * 返回一个 close 函数，调用方主动取消时用。
  */
-function requestTrust(health) {
-  if (!health?.trust_url) {
-    throw new Error('health.trust_url 不存在 — 只在 cors_allowed=false 时才会下发')
-  }
-  location.href = health.trust_url
+function streamTask(port, streamUrl, { onProgress, onDone, onError } = {}) {
+  const es = new EventSource(`http://localhost:${port}${streamUrl}`)
+  es.addEventListener('progress', (e) =&gt; onProgress?.(JSON.parse(e.data)))
+  es.addEventListener('done', (e) =&gt; {
+    es.close()
+    onDone?.(JSON.parse(e.data))
+  })
+  es.onerror = (e) =&gt; { onError?.(e) }
+  return () =&gt; es.close()
 }</code></pre>
       </div>
     </section>
@@ -773,7 +920,7 @@ function requestTrust(health) {
   <!-- ============ runtime ============ -->
   <script>
     // ============================================================
-    // 通用：tab 切换
+    // Tab 切换
     // ============================================================
     document.querySelectorAll('.tabs button').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -788,9 +935,16 @@ function requestTrust(health) {
     // 组件渲染：通用函数。state 形如：
     //   { type: 'scan' }              → 探测中
     //   { type: 'offline' }           → 找不到 helper
-    //   { type: 'health', health }    → 拿到 health 响应，按其内容渲染
-    // 同一渲染函数同时被「状态画廊」和「真实演示」复用，避免两份漂移。
+    //   { type: 'health', health }    → 拿到 health 响应（含 cors_allowed / has_update）
+    //   { type: 'task', task }        → 草稿任务运行中（task 含 subtasks / progress）
     // ============================================================
+
+    function formatBytes(n) {
+      if (n == null) return '?'
+      if (n < 1024) return n + ' B'
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB'
+      return (n / 1024 / 1024).toFixed(2) + ' MB'
+    }
 
     function renderBadgeInto(host, state, opts = {}) {
       host.innerHTML = ''
@@ -805,6 +959,11 @@ function requestTrust(health) {
       } else if (state.type === 'offline') {
         el.dataset.state = 'err'
         text.textContent = '剪映助手未运行'
+      } else if (state.type === 'task') {
+        el.dataset.state = 'running'
+        const t = state.task
+        const done = t.subtasks.filter(s => s.status === 'done').length
+        text.textContent = `草稿生成中 ${done}/${t.subtasks.length} · ${t.progress}%`
       } else if (state.health.cors_allowed === false) {
         el.dataset.state = 'warn'
         text.textContent = '需要授权'
@@ -816,6 +975,10 @@ function requestTrust(health) {
       } else {
         el.dataset.state = 'ok'
         text.textContent = '已连接 v' + state.health.version
+        if (state.health.has_update) {
+          el.classList.add('has-update')
+          el.title = `有新版 v${state.health.latest_version}`
+        }
       }
       host.appendChild(el)
     }
@@ -836,79 +999,115 @@ function requestTrust(health) {
       const actions = root.querySelector('.actions')
 
       if (state.type === 'scan') {
-        pill.dataset.state = 'scan'
-        pill.textContent = '探测中'
+        pill.dataset.state = 'scan'; pill.textContent = '探测中'
         body.innerHTML = '正在扫描本地端口...'
-      } else if (state.type === 'offline') {
-        pill.dataset.state = 'err'
-        pill.textContent = '离线'
+        return
+      }
+      if (state.type === 'offline') {
+        pill.dataset.state = 'err'; pill.textContent = '离线'
         body.innerHTML = '未在端口 9527–9536 找到剪映助手。'
         actions.innerHTML = `<button class="btn" onclick="${opts.retryFn || ''}">重新探测</button>`
+        return
+      }
+      if (state.type === 'task') {
+        const t = state.task
+        pill.dataset.state = 'running'; pill.textContent = '生成中'
+        body.innerHTML = `<span class="strong">${t.draft_name}</span> · ${t.progress}%`
+        // 总进度条
+        const bar = document.createElement('div')
+        bar.className = 'task-progress'
+        bar.innerHTML = `<div style="width:${t.progress}%"></div>`
+        root.insertBefore(bar, actions)
+        // mini 子任务列表（最多 3 个 + 余下统计）
+        const ul = document.createElement('ul')
+        ul.className = 'mini-subtasks'
+        const visible = t.subtasks.slice(0, 3)
+        visible.forEach(s => {
+          const li = document.createElement('li')
+          li.dataset.status = s.status
+          li.innerHTML = `<span class="mark"></span>
+            <span class="name">${s.name}</span>
+            <span class="pct">${s.progress}%</span>`
+          ul.appendChild(li)
+        })
+        if (t.subtasks.length > 3) {
+          const more = document.createElement('li')
+          more.innerHTML = `<span class="mark"></span><span class="name">+ 还有 ${t.subtasks.length - 3} 个素材</span><span class="pct"></span>`
+          ul.appendChild(more)
+        }
+        root.insertBefore(ul, actions)
+        return
+      }
+      // health 分支
+      const h = state.health
+      if (h.cors_allowed === false) {
+        pill.dataset.state = 'warn'; pill.textContent = '需要授权'
+        body.innerHTML = `当前页面 <code>${h.your_origin || '(无 origin)'}</code> 未被信任，点下方按钮唤起授权。`
+        actions.innerHTML = `
+          <button class="btn primary" onclick="${opts.trustFn || `alert('demo：实际部署会跳转 ${h.trust_url}')`}">允许接入</button>
+          <button class="btn" onclick="${opts.retryFn || ''}">我已授权，重试</button>`
       } else {
-        const h = state.health
-        if (h.cors_allowed === false) {
-          pill.dataset.state = 'warn'
-          pill.textContent = '需要授权'
-          body.innerHTML = `当前页面 <code>${h.your_origin || '(无 origin)'}</code> 未被信任，点下方按钮唤起授权。`
-          actions.innerHTML = `
-            <button class="btn primary" onclick="${opts.trustFn || `alert('demo：实际部署会跳转 ${h.trust_url}')`}">允许接入</button>
-            <button class="btn" onclick="${opts.retryFn || ''}">我已授权，重试</button>`
-        } else {
-          pill.dataset.state = 'ok'
-          pill.textContent = '已连接'
-          body.innerHTML = `<span class="strong">v${h.version}</span> · 端口 ${h.port}`
-        }
-        if (h.has_update) {
-          const hint = document.createElement('div')
-          hint.className = 'update-hint'
-          hint.innerHTML = `🎉 新版 v${h.latest_version} 可用`
-          root.appendChild(hint)
-        }
+        pill.dataset.state = 'ok'; pill.textContent = '已连接'
+        body.innerHTML = `<span class="strong">v${h.version}</span> · 端口 ${h.port}`
+      }
+      if (h.has_update) {
+        const hint = document.createElement('div')
+        hint.className = 'update-hint'
+        hint.innerHTML = `🎉 新版 v${h.latest_version} 可用 · <a href="${h.release_url}" target="_blank" style="color: var(--accent)">查看更新</a>`
+        root.appendChild(hint)
       }
     }
 
     function renderInlineInto(host, state, opts = {}) {
       host.innerHTML = `
         <button class="ch-inline">
+          <span class="progress-fill"></span>
           <span class="icon"></span><span class="text"></span>
         </button>`
       const btn = host.querySelector('.ch-inline')
       const icon = btn.querySelector('.icon')
       const text = btn.querySelector('.text')
+      const fill = btn.querySelector('.progress-fill')
 
       if (state.type === 'scan') {
         btn.dataset.state = 'scan'
-        icon.textContent = '⏳'
-        text.textContent = '探测中'
+        icon.textContent = '⏳'; text.textContent = '探测中'
       } else if (state.type === 'offline') {
         btn.dataset.state = 'err'
-        icon.textContent = '⚠'
-        text.textContent = '剪映助手未运行 · 点击重试'
+        icon.textContent = '⚠'; text.textContent = '剪映助手未运行 · 点击重试'
         btn.onclick = opts.retryFn || (() => {})
+      } else if (state.type === 'task') {
+        const t = state.task
+        btn.dataset.state = 'running'
+        icon.textContent = '⏳'
+        text.textContent = `草稿生成中 ${t.progress}%`
+        fill.style.width = t.progress + '%'
       } else if (state.health.cors_allowed === false) {
         btn.dataset.state = 'warn'
-        icon.textContent = '🔓'
-        text.textContent = '点击授权剪映助手'
+        icon.textContent = '🔓'; text.textContent = '点击授权剪映助手'
         btn.onclick = opts.onTrustClick || (() => alert('demo：实际部署会跳转 ' + state.health.trust_url))
       } else {
         btn.dataset.state = 'ok'
         icon.textContent = '✓'
         text.textContent = `剪映助手已连接 v${state.health.version}`
+        if (state.health.has_update) {
+          const tag = document.createElement('span')
+          tag.className = 'update-tag'
+          tag.textContent = `· 有更新`
+          tag.title = `新版 v${state.health.latest_version}`
+          btn.appendChild(tag)
+        }
       }
     }
 
-    /**
-     * Wizard 接收一个 stepStates 数组：
-     *   [{key, title, meta, status}, ...]  status ∈ pending|active|done|failed
-     * 以及可选 action HTML（底部按钮区）。
-     */
-    function renderWizardInto(host, { stepStates, actionHTML = '' }) {
+    function renderWizardInto(host, { stepStates, actionHTML = '', extraHTML = '' }) {
       const items = stepStates.map(s => `
         <li data-status="${s.status}" data-step="${s.key}">
           <span class="step-num">${s.num}</span>
           <div class="step-body">
             <div class="step-title">${s.title}</div>
             <div class="step-meta">${s.meta || ''}</div>
+            ${s.extra || ''}
           </div>
         </li>
       `).join('')
@@ -917,18 +1116,19 @@ function requestTrust(health) {
           <h3>接入剪映助手</h3>
           <p class="sub">按以下步骤完成连接。</p>
           <ol class="steps">${items}</ol>
+          ${extraHTML}
           <div class="wizard-action">${actionHTML}</div>
         </div>`
     }
 
     // ============================================================
-    // PART 1: 状态画廊 — 用 fixture 数据驱动渲染各组件 × 各状态
+    // PART 1: 状态画廊
     // ============================================================
 
     function makeFakeHealth(overrides = {}) {
       return {
         service: 'capcut_helper',
-        version: '0.1.8',
+        version: '0.1.9',
         port: 9527,
         last_draft_request_at: null,
         your_origin: 'https://your-app.com',
@@ -936,9 +1136,30 @@ function requestTrust(health) {
         hint: null,
         scheme: 'capcut-helper',
         trust_url: null,
-        latest_version: '0.1.8',
+        latest_version: '0.1.9',
         has_update: false,
         release_url: null,
+        ...overrides,
+      }
+    }
+
+    function makeFakeTask(overrides = {}) {
+      return {
+        id: 'demo123',
+        draft_name: '我的视频',
+        created_at: Date.now() / 1000,
+        status: 'downloading',
+        progress: 47,
+        result: null,
+        error: null,
+        subtasks: [
+          { id: 'a1', name: 'clip1.mp4', url: 'https://x/clip1.mp4',
+            status: 'done', progress: 100, bytes_downloaded: 1234567, total_bytes: 1234567, error: null },
+          { id: 'b2', name: 'clip2.mp4', url: 'https://x/clip2.mp4',
+            status: 'downloading', progress: 67, bytes_downloaded: 800000, total_bytes: 1200000, error: null },
+          { id: 'c3', name: 'clip3.mp4', url: 'https://x/clip3.mp4',
+            status: 'pending', progress: 0, bytes_downloaded: 0, total_bytes: null, error: null },
+        ],
         ...overrides,
       }
     }
@@ -946,27 +1167,22 @@ function requestTrust(health) {
     const states = {
       scan: { tag: '探测中', tone: 'scan', state: { type: 'scan' } },
       offline: { tag: '离线 / 未安装', tone: 'err', state: { type: 'offline' } },
-      ok: {
-        tag: '已连接', tone: 'ok',
-        state: { type: 'health', health: makeFakeHealth() },
-      },
-      okUpdate: {
-        tag: '已连接 · 有更新', tone: 'ok',
-        state: { type: 'health', health: makeFakeHealth({
-          has_update: true,
-          latest_version: '0.2.0',
-          release_url: 'https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0',
-        }) },
-      },
-      needAuth: {
-        tag: '需要授权', tone: 'warn',
-        state: { type: 'health', health: makeFakeHealth({
-          cors_allowed: false,
-          your_origin: 'https://your-app.com',
-          hint: '当前域名未在 CORS 白名单中',
-          trust_url: 'capcut-helper://trust?origin=https%3A%2F%2Fyour-app.com',
-        }) },
-      },
+      ok: { tag: '已连接', tone: 'ok',
+            state: { type: 'health', health: makeFakeHealth() } },
+      okUpdate: { tag: '已连接 · 有新版本', tone: 'ok',
+                  state: { type: 'health', health: makeFakeHealth({
+                    has_update: true,
+                    latest_version: '0.2.0',
+                    release_url: 'https://github.com/cookaihq/capcut_helper/releases/tag/v0.2.0',
+                  }) } },
+      needAuth: { tag: '需要授权', tone: 'warn',
+                  state: { type: 'health', health: makeFakeHealth({
+                    cors_allowed: false,
+                    hint: '当前域名未在 CORS 白名单中',
+                    trust_url: 'capcut-helper://trust?origin=https%3A%2F%2Fyour-app.com',
+                  }) } },
+      running: { tag: '运行中（草稿生成中）', tone: 'running',
+                 state: { type: 'task', task: makeFakeTask() } },
     }
 
     function buildGallery(hostId, renderFn, stateKeys) {
@@ -975,58 +1191,48 @@ function requestTrust(health) {
         const { tag, tone, state } = states[key]
         const cell = document.createElement('div')
         cell.className = 'state-cell'
-        cell.innerHTML = `
-          <div class="state-tag" data-tone="${tone}">${tag}</div>
-          <div class="preview"></div>`
+        cell.innerHTML = `<div class="state-tag" data-tone="${tone}">${tag}</div><div class="preview"></div>`
         host.appendChild(cell)
         renderFn(cell.querySelector('.preview'), state)
       })
     }
 
-    // 渲染各组件状态画廊
-    const basicStates = ['scan', 'ok', 'okUpdate', 'needAuth', 'offline']
-    buildGallery('gallery-badge', renderBadgeInto, basicStates)
-    buildGallery('gallery-card', renderCardInto, basicStates)
-    buildGallery('gallery-inline', renderInlineInto, basicStates)
+    const galleryStates = ['scan', 'ok', 'okUpdate', 'running', 'needAuth', 'offline']
+    buildGallery('gallery-badge', renderBadgeInto, galleryStates)
+    buildGallery('gallery-card', renderCardInto, galleryStates)
+    buildGallery('gallery-inline', renderInlineInto, galleryStates)
 
-    // 向导：用一组预设状态展示不同推进阶段
+    // Wizard 4 个场景（含 running）
     const wizardScenarios = [
-      {
-        tag: '初始 / 探测中', tone: 'scan',
+      { tag: '初始 / 探测中', tone: 'scan',
         stepStates: [
           { num: 1, key: 'discover', status: 'active', title: '发现本地服务', meta: '扫描端口 9527–9536' },
           { num: 2, key: 'cors', status: 'pending', title: '检查跨域授权', meta: '确认本页面在白名单' },
-          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
-        ],
-      },
-      {
-        tag: '发现失败 / 离线', tone: 'err',
+          { num: 3, key: 'task', status: 'pending', title: '生成草稿', meta: '提交后实时显示进度' },
+        ] },
+      { tag: '需要授权', tone: 'warn',
         stepStates: [
-          { num: 1, key: 'discover', status: 'failed', title: '发现本地服务', meta: '端口段全部无响应' },
-          { num: 2, key: 'cors', status: 'pending', title: '检查跨域授权', meta: '确认本页面在白名单' },
-          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
-        ],
-        actionHTML: `<button class="btn primary">重新探测</button>`,
-      },
-      {
-        tag: '需要授权', tone: 'warn',
-        stepStates: [
-          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.8' },
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.9' },
           { num: 2, key: 'cors', status: 'failed', title: '检查跨域授权', meta: '当前 origin <code>https://your-app.com</code> 不在白名单' },
-          { num: 3, key: 'done', status: 'pending', title: '就绪', meta: '可以调用业务接口' },
+          { num: 3, key: 'task', status: 'pending', title: '生成草稿', meta: '提交后实时显示进度' },
         ],
         actionHTML: `
           <button class="btn primary">允许接入</button>
-          <button class="btn">我已授权，重试</button>`,
-      },
-      {
-        tag: '全部就绪', tone: 'ok',
+          <button class="btn">我已授权，重试</button>` },
+      { tag: '运行中', tone: 'running',
         stepStates: [
-          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.8' },
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.9' },
           { num: 2, key: 'cors', status: 'done', title: '检查跨域授权', meta: '已授权' },
-          { num: 3, key: 'done', status: 'done', title: '就绪', meta: '可以调用 /api/v1/drafts' },
-        ],
-      },
+          { num: 3, key: 'task', status: 'running', title: '生成草稿',
+            meta: '<code>我的视频</code> · 47% · 已下完 1/3 个素材',
+            extra: `<div class="wizard-progress"><div style="width:47%"></div></div>` },
+        ] },
+      { tag: '全部就绪（含新版本提示）', tone: 'ok',
+        stepStates: [
+          { num: 1, key: 'discover', status: 'done', title: '发现本地服务', meta: '端口 9527 · v0.1.9 · 🎉 新版 v0.2.0 可用' },
+          { num: 2, key: 'cors', status: 'done', title: '检查跨域授权', meta: '已授权' },
+          { num: 3, key: 'task', status: 'done', title: '生成草稿', meta: '<code>我的视频</code> 已完成' },
+        ] },
     ]
 
     {
@@ -1034,13 +1240,12 @@ function requestTrust(health) {
       wizardScenarios.forEach((scn) => {
         const cell = document.createElement('div')
         cell.className = 'state-cell wide'
-        cell.innerHTML = `
-          <div class="state-tag" data-tone="${scn.tone}">${scn.tag}</div>
-          <div class="preview"></div>`
+        cell.innerHTML = `<div class="state-tag" data-tone="${scn.tone}">${scn.tag}</div><div class="preview"></div>`
         host.appendChild(cell)
         renderWizardInto(cell.querySelector('.preview'), {
           stepStates: scn.stepStates,
           actionHTML: scn.actionHTML || '',
+          extraHTML: scn.extraHTML || '',
         })
       })
     }
@@ -1053,31 +1258,28 @@ function requestTrust(health) {
     const HELPER_PORT_RANGE = [9527, 9528, 9529, 9530, 9531, 9532, 9533, 9534, 9535, 9536]
     const SAMPLE_VIDEO_URL = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4'
 
-    // 整个 live flow 的状态
     const live = {
       port: null,
       health: null,
       taskId: null,
-      pollHandle: null,
+      streamUrl: null,
+      eventSource: null,
     }
 
     function setStepStatus(id, status) {
       document.getElementById(id).dataset.status = status
     }
-
     function showResult(id, content, cls = '') {
       const el = document.getElementById(id)
       el.hidden = false
       el.className = 'result-box' + (cls ? ' ' + cls : '')
       el.textContent = content
     }
-
     function defaultDraftName() {
       const d = new Date()
       const pad = (n) => String(n).padStart(2, '0')
       return `demo-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
     }
-
     function defaultSpec() {
       return {
         draft_name: defaultDraftName(),
@@ -1091,13 +1293,10 @@ function requestTrust(health) {
         }],
       }
     }
-
     function resetSpec() {
       document.getElementById('input-draft-name').value = defaultDraftName()
       document.getElementById('input-spec').value = JSON.stringify(defaultSpec(), null, 2)
     }
-
-    // 初始化第三步表单
     resetSpec()
 
     async function discoverHelper({ timeoutMs = 500 } = {}) {
@@ -1121,7 +1320,6 @@ function requestTrust(health) {
       }
       return null
     }
-
     async function fetchHealth(port) {
       const resp = await fetch(`http://localhost:${port}/api/v1/health`)
       return (await resp.json()).data
@@ -1131,7 +1329,6 @@ function requestTrust(health) {
     async function runDiscover() {
       setStepStatus('step-discover', 'active')
       showResult('discover-result', '正在扫描端口段 9527–9536...')
-
       const result = await discoverHelper()
       if (!result) {
         setStepStatus('step-discover', 'failed')
@@ -1142,7 +1339,8 @@ function requestTrust(health) {
       live.health = result.health
       setStepStatus('step-discover', 'done')
       showResult('discover-result',
-        `✓ 找到 capcut_helper\n  端口: ${result.port}\n  版本: v${result.health.version}`, 'ok')
+        `✓ 找到 capcut_helper\n  端口: ${result.port}\n  版本: v${result.health.version}` +
+        (result.health.has_update ? `\n  🎉 新版 v${result.health.latest_version} 可用` : ''), 'ok')
       runCheck()
     }
 
@@ -1151,7 +1349,6 @@ function requestTrust(health) {
       setStepStatus('step-check', 'active')
       const h = live.health
       showResult('check-result', JSON.stringify(h, null, 2))
-
       const actions = document.getElementById('check-actions')
       actions.innerHTML = ''
 
@@ -1162,35 +1359,26 @@ function requestTrust(health) {
         trustBtn.textContent = '🔓 允许接入（唤起剪映助手）'
         trustBtn.onclick = () => { window.location.href = h.trust_url }
         actions.appendChild(trustBtn)
-
         const retryBtn = document.createElement('button')
         retryBtn.className = 'btn'
         retryBtn.textContent = '我已授权，重试'
-        retryBtn.onclick = async () => {
-          live.health = await fetchHealth(live.port)
-          runCheck()
-        }
+        retryBtn.onclick = async () => { live.health = await fetchHealth(live.port); runCheck() }
         actions.appendChild(retryBtn)
         return
       }
 
       setStepStatus('step-check', 'done')
-      // 进入步骤 3
       setStepStatus('step-spec', 'active')
       setStepStatus('step-submit', 'active')
     }
 
-    // ===== 步骤 4：提交草稿 =====
+    // ===== 步骤 4：提交 =====
     async function runSubmit() {
       const draftName = document.getElementById('input-draft-name').value.trim()
       const specText = document.getElementById('input-spec').value
       let spec
-      try {
-        spec = JSON.parse(specText)
-      } catch (e) {
-        showResult('submit-result', '❌ 时间线 JSON 解析失败：' + e.message, 'err')
-        return
-      }
+      try { spec = JSON.parse(specText) }
+      catch (e) { showResult('submit-result', '❌ 时间线 JSON 解析失败：' + e.message, 'err'); return }
       if (draftName) spec.draft_name = draftName
 
       document.getElementById('btn-submit').disabled = true
@@ -1207,16 +1395,16 @@ function requestTrust(health) {
         if (body.code !== 0) {
           setStepStatus('step-submit', 'failed')
           showResult('submit-result',
-            `❌ 提交失败 (code=${body.code}): ${body.message}\n` +
-            JSON.stringify(body.data, null, 2), 'err')
+            `❌ 提交失败 (code=${body.code}): ${body.message}\n` + JSON.stringify(body.data, null, 2), 'err')
           document.getElementById('btn-submit').disabled = false
           return
         }
         live.taskId = body.data.task_id
+        live.streamUrl = body.data.stream_url
         setStepStatus('step-submit', 'done')
         showResult('submit-result',
-          `✓ 已提交\n  task_id: ${body.data.task_id}\n  draft_name: ${spec.draft_name}`, 'ok')
-        runPoll()
+          `✓ 已提交\n  task_id: ${body.data.task_id}\n  stream_url: ${body.data.stream_url}\n  draft_name: ${spec.draft_name}`, 'ok')
+        runStream()
       } catch (err) {
         setStepStatus('step-submit', 'failed')
         showResult('submit-result', '❌ 请求异常: ' + err.message, 'err')
@@ -1224,59 +1412,78 @@ function requestTrust(health) {
       }
     }
 
-    // ===== 步骤 5：轮询任务 =====
-    async function runPoll() {
-      setStepStatus('step-poll', 'active')
-      const statusEl = document.getElementById('poll-status')
-      const progressBar = document.getElementById('poll-progress')
+    // ===== 步骤 5：SSE 订阅 =====
+    function runStream() {
+      setStepStatus('step-stream', 'active')
+      const statusEl = document.getElementById('stream-status')
+      const progressBar = document.getElementById('stream-progress')
       const progressInner = progressBar.querySelector('div')
-      const resultEl = document.getElementById('poll-result')
+      const subtaskList = document.getElementById('subtask-list')
+      const subtaskHeader = document.getElementById('subtask-header')
+      const eventsEl = document.getElementById('stream-events')
 
       progressBar.hidden = false
-      resultEl.hidden = false
+      progressBar.className = 'progress-bar'
+      eventsEl.textContent = ''
 
-      const tick = async () => {
-        try {
-          const resp = await fetch(`http://localhost:${live.port}/api/v1/tasks/${live.taskId}`)
-          const body = await resp.json()
-          if (body.code !== 0) {
-            statusEl.textContent = `查询失败 (code=${body.code}): ${body.message}`
-            setStepStatus('step-poll', 'failed')
-            return
-          }
-          const d = body.data
-          statusEl.textContent = `status=${d.status} · progress=${d.progress}%`
-          progressInner.style.width = `${d.progress}%`
-          resultEl.textContent = JSON.stringify(d, null, 2)
+      const url = `http://localhost:${live.port}${live.streamUrl}`
+      statusEl.textContent = `订阅 SSE: ${url}`
 
-          if (d.status === 'done') {
-            progressBar.className = 'progress-bar ok'
-            setStepStatus('step-poll', 'done')
-            runDone(d)
-            return
-          }
-          if (d.status === 'failed') {
-            progressBar.className = 'progress-bar err'
-            setStepStatus('step-poll', 'failed')
-            resultEl.className = 'result-box err'
-            return
-          }
-          live.pollHandle = setTimeout(tick, 1500)
-        } catch (err) {
-          statusEl.textContent = '查询异常: ' + err.message
-          setStepStatus('step-poll', 'failed')
-        }
+      const renderSubtasks = (subs) => {
+        if (subs.length === 0) { subtaskHeader.hidden = true; return }
+        subtaskHeader.hidden = false
+        subtaskList.innerHTML = subs.map(s => {
+          const bytes = s.total_bytes
+            ? `${formatBytes(s.bytes_downloaded)} / ${formatBytes(s.total_bytes)}`
+            : formatBytes(s.bytes_downloaded)
+          return `<li class="subtask-row" data-status="${s.status}">
+            <span class="name">${s.name}</span>
+            <span class="mini-bar"><div style="width:${s.progress}%"></div></span>
+            <span class="meta">${s.progress}% · ${bytes}</span>
+          </li>`
+        }).join('')
       }
-      tick()
+
+      const es = new EventSource(url)
+      live.eventSource = es
+
+      es.addEventListener('progress', (e) => {
+        const task = JSON.parse(e.data)
+        statusEl.textContent = `status=${task.status} · progress=${task.progress}%`
+        progressInner.style.width = `${task.progress}%`
+        renderSubtasks(task.subtasks || [])
+        eventsEl.textContent += `[progress] ${new Date().toISOString().slice(11, 23)} status=${task.status} progress=${task.progress}\n`
+        eventsEl.scrollTop = eventsEl.scrollHeight
+      })
+
+      es.addEventListener('done', (e) => {
+        const task = JSON.parse(e.data)
+        es.close()
+        live.eventSource = null
+        eventsEl.textContent += `[done]     ${new Date().toISOString().slice(11, 23)} status=${task.status}\n`
+        if (task.status === 'done') {
+          progressBar.className = 'progress-bar ok'
+          setStepStatus('step-stream', 'done')
+          runDone(task)
+        } else {
+          progressBar.className = 'progress-bar err'
+          setStepStatus('step-stream', 'failed')
+          statusEl.textContent = `❌ ${task.error}`
+        }
+      })
+
+      es.onerror = () => {
+        statusEl.textContent += '  (SSE 连接异常 / 已关闭)'
+      }
     }
 
     // ===== 步骤 6：完成 =====
-    function runDone(taskData) {
+    function runDone(task) {
       setStepStatus('step-done', 'done')
       showResult('done-result',
         `🎉 草稿已创建\n\n` +
-        `草稿路径：${taskData.result}\n\n` +
-        `下一步：打开剪映 → 草稿列表 → 找到「${(JSON.parse(document.getElementById('input-spec').value).draft_name) || '...'}」`,
+        `草稿路径：${task.result}\n\n` +
+        `下一步：打开剪映 → 草稿列表 → 找到「${task.draft_name}」`,
         'ok')
       document.getElementById('btn-submit').disabled = false
     }
